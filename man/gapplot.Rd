@@ -4,7 +4,15 @@
 \alias{gapplot}
 \title{Plotting a decomp object}
 \usage{
-gapplot(obj, data = obj$gaps, log = FALSE, at = seq(-2e+05, 1e+05, 10000), ...)
+gapplot(
+  obj,
+  data = obj$gaps_each,
+  log = FALSE,
+  rot = 45,
+  at = seq(-2e+05, 1e+05, 10000),
+  auto.key = list(space = "right"),
+  ...
+)
 }
 \arguments{
 \item{decomp}{a decomp object creaate by \code{\link{decomp}}.}

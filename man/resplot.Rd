@@ -10,7 +10,9 @@ resplot(
   log = FALSE,
   which = 1,
   at = seq(-2e+05, 1e+05, 10000),
-  ...
+  ...,
+  rot = 45,
+  par.strip.text = list(cex = 1)
 )
 }
 \description{

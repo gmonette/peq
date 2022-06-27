@@ -4,7 +4,7 @@
 \alias{decomp}
 \title{Decompose pay gaps suing a sequence of models}
 \usage{
-decomp(fitl, g, comp, droplast = NULL)
+decomp(fitl, g, comp, data = getD(full))
 }
 \arguments{
 \item{fitl}{a list of fitted models. All models should be nested in the last.
@@ -14,7 +14,7 @@ Usually each model is nested in the next model.}
 
 \item{comp}{level of variable 'g' to use as comparator.}
 
-\item{droplast}{drop the last model if used as global inclusive model}
+\item{data}{used for fit model on common data. Needed for nlme models}
 }
 \description{
 Pay equity gaps between equity-seeking groups and a comparator
@@ -23,7 +23,5 @@ Pay equity gaps between equity-seeking groups and a comparator
 \dontrun{
 library(peq)
 library(spida2)
-
-
 }
 }

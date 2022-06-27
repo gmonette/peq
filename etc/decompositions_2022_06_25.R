@@ -40,37 +40,6 @@ if(FALSE){                                             ## Sample data ----------
       ) %>% rev -> fitl
   }                                      ## RUN sample data ----
 }
-#' Graphical comparison of AIC and BIC
-#'
-#' Compares AIC and BIC for a list of models. The models should have been fitted
-#' to the same data.
-#'
-#' @param ll a list of models using the same data.
-#' @param rot angle to rotate labels
-#'
-#' @export
-icp <- function(ll, ..., rot = 0, srt = rot){
-  if(is.null(names(ll))) {
-    names(ll) <- paste0("model_",seq_along(ll))
-  }
-  a <- aic(ll)
-  b <- bic(ll)
-  a$BIC <- b$BIC
-  srt
-
-  a <- sortdf(a, ~ df)
-  tobj <- xyplot(AIC +BIC~ df, a, type = 'l', outer = T,...,
-                 labs = rownames(a), fonts = 2,
-                 subscripts = TRUE,
-                 layout = c(1,2),
-                 rot = rot,
-                 scales = list(y = list(relation = 'free')))+
-    layer(panel.text(..., labels = labs, fonts = 2, srt = srt))
-  print(tobj)
-  print(a)
-  print(sortdf(a, ~ AIC))
-  invisible(ll)
-}
 #' Decompose pay gaps suing a sequence of models
 #'
 #' Pay equity gaps between equity-seeking groups and a comparator
@@ -84,6 +53,8 @@ icp <- function(ll, ..., rot = 0, srt = rot){
 #' \dontrun{
 #' library(peq)
 #' library(spida2)
+#'
+#'
 #' }
 #' @export
 decomp <- function(fitl, g, comp, data = getD(full)) {
@@ -417,34 +388,32 @@ gapplot <- function(obj, data = obj$gaps_each, log = FALSE, rot = 45,
     layer_(panel.grid(v=-1,h=-1))
 
 }
+#' @export
+qstats_1 <- function (x, coef = 0.05, do.conf = TRUE, do.out = TRUE, ends = .05) {
+    # adapted from grDevices::boxplot.stats to return quantile whiskers
+    disp <- function(...) NULL
+    disp('in qstats')
+    nna <- !is.na(x)
+    n <- sum(nna)
+    stats <- stats::fivenum(x, na.rm = TRUE)
+    stats[c(1,5)] <- quantile(x, c(ends, 1-ends), na.rm = TRUE)
+    big <- na2f(x > max(stats))
+    small <- na2f(x < min(stats))
+    disp(big)
+    out <- x[big | small]
+    # iqr <- diff(stats[c(2, 4)])
+    #out <- (x > stats[5]) | (x < stats[1])
+    list(stats = stats, n = n, conf = FALSE, out = if (length(out)>0) out else numeric())
+  }
 #' Plot individual residuals
 #'
 #'
-#' @export
 resplot <- function(obj, data = obj$dout, log = FALSE, which = 1,
                     at = seq(-200000,100000,10000),..., rot = 45,
                     par.strip.text = list(cex = 1)) {
     disp <- function(...) NULL
-    library(latticeExtra)
-    library(spida2)
-    env <- environment()
-    qstats_1 <- function (x, coef = 0.05, do.conf = TRUE, do.out = TRUE, ends = .05) {
-      # adapted from grDevices::boxplot.stats to return quantile whiskers
-      disp <- function(...) NULL
-      disp('in qstats')
-      nna <- !is.na(x)
-      n <- sum(nna)
-      stats <- stats::fivenum(x, na.rm = TRUE)
-      stats[c(1,5)] <- quantile(x, c(ends, 1-ends), na.rm = TRUE)
-      big <- na2f(x > max(stats))
-      small <- na2f(x < min(stats))
-      disp(big)
-      out <- x[big | small]
-      # iqr <- diff(stats[c(2, 4)])
-      #out <- (x > stats[5]) | (x < stats[1])
-      list(stats = stats, n = n, conf = FALSE, out = if (length(out)>0) out else numeric())
-    }
-
+  library(latticeExtra)
+  library(spida2)
   # qstats <- boxplot.stats
   dollar_gap <- function(x, reference) {   # also in gapplot
     et <- function(x) exp(x/100)
@@ -478,10 +447,7 @@ if(which ==1)  xyplot(gresids ~ model | data[[obj$names$gname]],
          xlab = "Cumulatively adjusted factors",
          auto.key = list(space = 'right'))+
     # layer_(panel.grid(v=-1,h=-1))+
-    layer(panel.bwplot(..., horizontal = FALSE, fill = 'grey90', lwd = 2,
-                       varwidth = T,
-                       pch = '|',coef = 6, lty = 1,
-                       stats = get('qstats_1', envir = env))) +
+    layer(panel.bwplot(..., horizontal = FALSE, fill = 'grey90', lwd = 2,varwidth = T, pch = '|',coef = 6, lty = 1, stats = qstats_1)) +
     layer(panel.abline(h=0))
 else  xyplot(gresids ~ data[[obj$names$gname]] | model,
          data, ..., type = 'p', pch = '.', cex = 1, #alpha = .4,
