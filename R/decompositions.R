@@ -336,12 +336,18 @@ decomp <- function(fitl, g, comp, data = getD(full), refit = TRUE) {
 #' @export
 lssvd <- function(x, y, zero = 10^(-7), has_intercept = all(cbind(x)[,1] ==1)) {
   lssvd_nc <- function(x,y, zero) {
+    ret <- list()
     # x and y should be matrices
     xp <- svd(x, nu = ncol(x), nv = ncol(x))
     uy <- t(xp$u)%*%y
     dinv <- 1/xp$d
     dinv[abs(xp$d) < zero] <- 0
-    t(t(xp$v)*dinv) %*% uy
+    ret$coefficients <- t(t(xp$v)*dinv) %*% uy
+    ret$d <- xp$d
+    ret$zero <- zero
+    ret$p <- ncol(x)
+    ret$rank <- sum(xp$d > zero)
+    ret
   }
   disp <- function(...) NULL
   # if(!has_intercept) stop('has_intercept FALSE not yet implemented.')
@@ -369,12 +375,14 @@ lssvd <- function(x, y, zero = 10^(-7), has_intercept = all(cbind(x)[,1] ==1)) {
     disp(ym)
     Beta <- rbind( ym - rbind(xm) %*% B, B)
   }
-  else Beta <- lssvd_nc(x, y, zero = zero)
+  else ret <- lssvd_nc(x, y, zero = zero)
+  Beta <- ret$coefficients
   colnames(Beta) <- yn
   rownames(Beta) <- xn
-  resids <-  y - xorig%*%Beta
-  sse <- apply(resids, 2, function(x) sum(x^2))
-  list(coefficients = Beta, residuals = y - xorig%*%Beta  , sse = sse)
+  ret$coefficients <- Beta
+  ret$resids <-  y - xorig%*%Beta
+  ret$sse <- apply(resids, 2, function(x) sum(x^2))
+  ret
 }
 if(FALSE) {
   zy <- cbind(1, 1:100, (1:100)^2-((1:100))^3)
