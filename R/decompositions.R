@@ -1,4 +1,4 @@
-# PROBLEMS:
+# PROBLEMS: fixed?
 # - output in z$gaps obtained through wald test is not wholly consistent
 #   with regression gaps while taking means of gresid appears to
 #   be. This might have something to do with estimation from a full
@@ -56,14 +56,12 @@ icp <- function(ll, ..., rot = 0, srt = rot){
   a <- aic(ll)
   b <- bic(ll)
   a$BIC <- b$BIC
-  srt
-
   a <- sortdf(a, ~ df)
   tobj <- xyplot(AIC +BIC~ df, a, type = 'l', outer = T,...,
                  labs = rownames(a), fonts = 2,
                  subscripts = TRUE,
                  layout = c(1,2),
-                 rot = rot,
+                 srt = srt,
                  scales = list(y = list(relation = 'free')))+
     layer(panel.text(..., labels = labs, fonts = 2, srt = srt))
   print(tobj)
@@ -86,7 +84,10 @@ icp <- function(ll, ..., rot = 0, srt = rot){
 #' library(spida2)
 #' }
 #' @export
-decomp <- function(fitl, g, comp, data = getD(full)) {
+decomp <- function(fitl, g, comp, data = getD(full), refit = TRUE) {
+  disp <- function(...) {
+    NULL
+  }
   # exportPattern("^[[:alpha:]]+")
   # fitl: list of fitted models that should be nested with fullest model last
   # g; character: names of group variable
@@ -146,14 +147,18 @@ decomp <- function(fitl, g, comp, data = getD(full)) {
 
   full <- fitl[[length(fitl)]]
   d <- data
-  fit_up <- lapply(fitl, update, data = d)
+  if(refit) {
+    fit_up <- lapply(fitl, update, data = d)
+  }
+  else {
+    fit_up <- fitl
+  }
   compcoefs <- lapply(seq_along(fitl),
                       function(ii) {
                         cbind(
                           compareCoefs(fitl[[ii]], fit_up[[ii]], print = FALSE),
                           diff = coef(fitl[[ii]])-coef(fit_up[[ii]]))
                       })
-
   names(compcoefs) <- names(fitl)
   ret[['compare']] <- compcoefs
 
@@ -303,19 +308,33 @@ decomp <- function(fitl, g, comp, data = getD(full)) {
   gapdiffs <- waldf(full, Ldiffs)
   ret[['gapdiffs']] <- gapdiffs
 
+  #
+  # Combine residuals and 'penalties'
+  #
+
+  geach <- ret[['gaps_each']]
+  geach$Type <- 'Each'
+  gfull <- ret[['gaps']]
+  gfull$Type <- 'Full'
+  gpen  <- ret[['gapdiffs']]
+  gpen$Type <- 'Penalty'
+  gpen$model <- gpen$gapdiffs
+  allgaps <- Rbind(geach,gfull,gpen)
+
+  ret[['allgaps']] <- allgaps
+
   class(ret) <- 'decomp'
   ret
-}
+}                                                           ## END decomp ####
 #' svd version of lsfit
 #'
 #' Works with rank-deficient models (currently not centering)
 #'
-#'
 #' @param x predictor matrix, should include intercept term if needed
 #' @param y response vector or matrix
-#' @param zero value below which a latent value is considered to be 0
+#' @param zero value below which a latent value of the data matrix is considered to be 0, default 10^(-7) in parallel with \code{\link{lsfit}}.
 #' @export
-lssvd <- function(x, y, zero = 10^(-16), has_intercept = all(cbind(x)[,1] ==1)) {
+lssvd <- function(x, y, zero = 10^(-7), has_intercept = all(cbind(x)[,1] ==1)) {
   lssvd_nc <- function(x,y, zero) {
     # x and y should be matrices
     xp <- svd(x, nu = ncol(x), nv = ncol(x))
@@ -378,11 +397,14 @@ gapplot <- function(obj, data = obj$gaps_each, log = FALSE, rot = 45,
 #                     at = seq(-200000,100000,10000),...) {
   library(latticeExtra)
   library(spida2)
+  disp <- function(...) {
+    NULL
+  }
   # Used gresids but then reverted to gaps_each after checking consistency
   dollar_gap <- function(x, reference) {
     et <- function(x) exp(x/100)
     lnt <- function(x)  100 * log(x)
-    et(x + lnt(reference)) - reference
+    et(x + reference) - et(reference)
   }
 #  data$coef <- with(data, capply(gresids, data[,c(obj$names$gname,'model')], mean, na.rm = T))
 #  form <- as.formula(paste('~', obj$names$gname, "+ model"))
@@ -402,8 +424,11 @@ gapplot <- function(obj, data = obj$gaps_each, log = FALSE, rot = 45,
     disp(sel)
     ref <- obj$pred[sel,'coef'][1]
     disp(ref)
+    disp(data$coef)
     data$coef <- dollar_gap(data$coef, ref)
+    disp(data$coef)
   }
+  disp(data$coef)
   xyplot(coef ~ model,
          data, ...,
          groups = data[[obj$names$gname]], type = 'b',
@@ -417,18 +442,10 @@ gapplot <- function(obj, data = obj$gaps_each, log = FALSE, rot = 45,
     layer_(panel.grid(v=-1,h=-1))
 
 }
-#' Plot individual residuals
-#'
+#' boxplot statistics for resplot
 #'
 #' @export
-resplot <- function(obj, data = obj$dout, log = FALSE, which = 1,
-                    at = seq(-200000,100000,10000),..., rot = 45,
-                    par.strip.text = list(cex = 1)) {
-    disp <- function(...) NULL
-    library(latticeExtra)
-    library(spida2)
-    env <- environment()
-    qstats_1 <- function (x, coef = 0.05, do.conf = TRUE, do.out = TRUE, ends = .05) {
+    qstats_resplot <- function (x, coef = 0.05, do.conf = TRUE, do.out = TRUE, ends = .05) {
       # adapted from grDevices::boxplot.stats to return quantile whiskers
       disp <- function(...) NULL
       disp('in qstats')
@@ -444,6 +461,18 @@ resplot <- function(obj, data = obj$dout, log = FALSE, which = 1,
       #out <- (x > stats[5]) | (x < stats[1])
       list(stats = stats, n = n, conf = FALSE, out = if (length(out)>0) out else numeric())
     }
+
+#' Plot individual residuals
+#'
+#'
+#' @export
+resplot <- function(obj, data = obj$dout, log = FALSE, which = 1,
+                    at = seq(-200000,100000,10000),..., rot = 45,
+                    par.strip.text = list(cex = 1)) {
+    disp <- function(...) NULL
+    library(latticeExtra)
+    library(spida2)
+    env <- environment()
 
   # qstats <- boxplot.stats
   dollar_gap <- function(x, reference) {   # also in gapplot
@@ -481,7 +510,7 @@ if(which ==1)  xyplot(gresids ~ model | data[[obj$names$gname]],
     layer(panel.bwplot(..., horizontal = FALSE, fill = 'grey90', lwd = 2,
                        varwidth = T,
                        pch = '|',coef = 6, lty = 1,
-                       stats = get('qstats_1', envir = env))) +
+                       stats = qstats_resplot)) +
     layer(panel.abline(h=0))
 else  xyplot(gresids ~ data[[obj$names$gname]] | model,
          data, ..., type = 'p', pch = '.', cex = 1, #alpha = .4,
@@ -503,7 +532,7 @@ else  xyplot(gresids ~ data[[obj$names$gname]] | model,
                        pch = '|',
                        coef = .1,
                        lty = 1,
-                       stats = qstats_1)) +
+                       stats = qstats.resplot)) +
     layer_(panel.grid(v=-1,h=-1))+
     layer(panel.abline(h=0))
 } # ;  resplot(z, at = seq(-100,110,10),log = T,which = 2, data = subset(z$dout, !model %in%c('full','fit1'))) # end of resplot                                        ## RUN --------------

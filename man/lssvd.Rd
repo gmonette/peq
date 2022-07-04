@@ -4,14 +4,14 @@
 \alias{lssvd}
 \title{svd version of lsfit}
 \usage{
-lssvd(x, y, zero = 10^(-16), has_intercept = all(cbind(x)[, 1] == 1))
+lssvd(x, y, zero = 10^(-7), has_intercept = all(cbind(x)[, 1] == 1))
 }
 \arguments{
 \item{x}{predictor matrix, should include intercept term if needed}
 
 \item{y}{response vector or matrix}
 
-\item{zero}{value below which a latent value is considered to be 0}
+\item{zero}{value below which a latent value of the data matrix is considered to be 0, default 10^(-7) in parallel with \code{\link{lsfit}}.}
 }
 \description{
 Works with rank-deficient models (currently not centering)

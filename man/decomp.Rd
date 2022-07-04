@@ -4,7 +4,7 @@
 \alias{decomp}
 \title{Decompose pay gaps suing a sequence of models}
 \usage{
-decomp(fitl, g, comp, data = getD(full))
+decomp(fitl, g, comp, data = getD(full), refit = TRUE)
 }
 \arguments{
 \item{fitl}{a list of fitted models. All models should be nested in the last.
