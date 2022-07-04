@@ -5,7 +5,32 @@
 #   model and numerical errors. Needs investigating. In the meantime
 #   gapplot uses gresids in z$dout
 #   Note that resplot already does
+if(FALSE){
 
+  X <- cbind(1, 1:100, (1:100)^2, 1:100)
+  # X <- cbind(1, 1:100, (1:100)^2)
+  y <- cbind(1:100)
+  Y <- cbind(1:100) %*% rbind(rep(1,1000))
+  Y[] <- Y + rnorm(100*1000)
+  dim(Y)
+
+  Bf <- lsfit(X,Y, intercept =FALSE)$coef
+
+  Bs <- peq::lssvd(X,Y,zero = 10^(-7))$coef
+  B1ret <- lssvd(X,Y)
+  B1ret[c('d','p','rank','zero')]
+  B1 <- B1ret$coef
+  dim(Bf)
+  dim(Bs)
+  var(t(Bf)) %>% svd(nu=0,nv=0)
+  var(t(Bs)) %>% svd(nu=0,nv=0)
+  var(t(B1)) %>% svd(nu=0,nv=0)
+  Bs %>% t %>% head
+  plot(t(Bs)[,c(2,4)])
+  plot(t(Bf)[,c(2,4)])
+
+
+}
 
 if(FALSE){                                             ## Sample data ----------
   {
@@ -381,7 +406,7 @@ lssvd <- function(x, y, zero = 10^(-7), has_intercept = all(cbind(x)[,1] ==1)) {
   rownames(Beta) <- xn
   ret$coefficients <- Beta
   ret$resids <-  y - xorig%*%Beta
-  ret$sse <- apply(resids, 2, function(x) sum(x^2))
+  ret$sse <- apply(ret$resids, 2, function(x) sum(x^2))
   ret
 }
 if(FALSE) {
