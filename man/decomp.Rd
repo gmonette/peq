@@ -2,9 +2,12 @@
 % Please edit documentation in R/decompositions.R
 \name{decomp}
 \alias{decomp}
+\alias{decomp2}
 \title{Decompose pay gaps suing a sequence of models}
 \usage{
 decomp(fitl, g, comp, data = getD(full), refit = TRUE)
+
+decomp2(fitl, g, comp, data = getD(full), cond = NULL, refit = TRUE)
 }
 \arguments{
 \item{fitl}{a list of fitted models. All models should be nested in the last.
@@ -15,10 +18,17 @@ Usually each model is nested in the next model.}
 \item{comp}{level of variable 'g' to use as comparator.}
 
 \item{data}{used for fit model on common data. Needed for nlme models}
+
+\item{cond}{vector of names of variables for conditioning (decomp2 only)}
 }
 \description{
 Pay equity gaps between equity-seeking groups and a comparator
 }
+\section{Functions}{
+\itemize{
+\item \code{decomp2}: conditional version with 'cond' argument
+}}
+
 \examples{
 \dontrun{
 library(peq)

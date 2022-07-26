@@ -2,9 +2,12 @@
 % Please edit documentation in R/decompositions.R
 \name{lssvd}
 \alias{lssvd}
+\alias{lssvd_old}
 \title{svd version of lsfit}
 \usage{
-lssvd(x, y, zero = 10^(-7), has_intercept = all(cbind(x)[, 1] == 1))
+lssvd(x, y, zero = 1e-07, ...)
+
+lssvd_old(x, y, zero = 10^(-7), has_intercept = all(cbind(x)[, 1] == 1))
 }
 \arguments{
 \item{x}{predictor matrix, should include intercept term if needed}
@@ -16,3 +19,8 @@ lssvd(x, y, zero = 10^(-7), has_intercept = all(cbind(x)[, 1] == 1))
 \description{
 Works with rank-deficient models (currently not centering)
 }
+\section{Functions}{
+\itemize{
+\item \code{lssvd_old}: oldversion
+}}
+
