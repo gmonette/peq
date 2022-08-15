@@ -110,7 +110,7 @@ icp <- function(ll, ..., rot = 0, srt = rot){
 #' library(spida2)
 #' }
 #' @export
-decomp <- function(fitl, g, comp, data = getD(full), refit = TRUE) {
+decomp <- function(fitl, g, comp, data = na.omit(getD(full)), refit = TRUE) {
   disp <- function(...) {
     NULL
   }
@@ -356,7 +356,7 @@ decomp <- function(fitl, g, comp, data = getD(full), refit = TRUE) {
 
 #' @describeIn decomp conditional version with 'cond' argument
 #' @export
-decomp2 <- function(fitl, g, comp, data = getD(full), cond = NULL, refit = TRUE) {
+decomp2 <- function(fitl, g, comp, data = na.omit(getD(full)), cond = NULL, refit = TRUE) {
   disp <- function(...) {
     NULL
   }
