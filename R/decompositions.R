@@ -168,11 +168,14 @@ decomp <- function(fitl, g, comp, data = na.omit(getD(full)), refit = TRUE) {
   ret <- list()
   ret[['names']] <- list(gname = g, gcomplevel = comp)
 
+
+
   #
   # Refit with data set used for full model to check for common data set
   #
 
   full <- fitl[[length(fitl)]]
+  ret[['data']] <- data
   d <- data
   if(refit) {
     fit_up <- lapply(fitl, update, data = d)
@@ -433,6 +436,7 @@ decomp2 <- function(fitl, g, comp, data = na.omit(getD(full)), cond = NULL, refi
   #
 
   full <- fitl[[length(fitl)]]
+  ret[['data']] <- data
   d <- data
   if(refit) {
     fit_up <- lapply(fitl, update, data = d)

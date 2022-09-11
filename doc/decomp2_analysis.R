@@ -36,6 +36,7 @@ mtcars %>%
   within(
     {
       Cyl <- factor(cyl)
+      Carb <- factor(carb)
     }
   ) -> z
 list() %>%
@@ -45,7 +46,7 @@ list() %>%
     fit1 <- lm(mpg ~ Cyl, z)
     fit2 <- lm(mpg ~ Cyl + gear, z)
     fit3 <- lm(mpg ~ Cyl * gear, z)
-    fit4 <- lm(mpg ~ Cyl * gear * hp, z)
+    fit4 <- lm(mpg ~ Cyl * gear * Carb, z)
     }
   ) %>% rev -> fitlist
 
@@ -53,7 +54,7 @@ library(peq)
 fitlist %>% icp
 
 # undebug(decomp2)
-zzc <- decomp2(fitlist, "Cyl", "4", z, c("gear",'hp'))
+zzc <- decomp2(fitlist, "Cyl", "4", z, c("gear","Carb"))
 zzm <- decomp(fitlist, "Cyl", '4', z)
 
 zzm$groupL %>% apply(1, sum)
