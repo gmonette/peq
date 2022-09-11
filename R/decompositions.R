@@ -426,6 +426,7 @@ decomp2 <- function(fitl, g, comp, data = na.omit(getD(full)), cond = NULL, refi
   library(car)
   ret <- list()
   ret[['names']] <- list(gname = g, gcomplevel = comp)
+  ret[['names']][['cond']] <- cond
 
   #
   # Refit with data set used for full model to check for common data set
@@ -473,7 +474,7 @@ decomp2 <- function(fitl, g, comp, data = na.omit(getD(full)), cond = NULL, refi
   #
   d1 <- d[,c(g,cond), drop=FALSE]
   d1 <- pred.grid_(d1)
-  groupL <- incmat(d1, d)
+  groupL <-incmat(d1, d)
   groupL <- groupL/apply(groupL,1,sum)
   dc_groupL <- d1
   dc_groupL$groupL <- groupL
@@ -485,9 +486,14 @@ decomp2 <- function(fitl, g, comp, data = na.omit(getD(full)), cond = NULL, refi
     y <- predict(f) + resid(f)
     y - predict(f, newdata = dg)
   })
+  ggaps <- lapply(fitl, function(f) {
+    y <- predict(f)
+    y - predict(f, newdata = dg)
+  })
   inds <- rep(1:nrow(d), length(gresids))
   dout <- d[inds,]
   dout$gresids <- unlist(gresids)
+  dout$ggaps <- unlist(ggaps)
   dout$model <- factor(rep(names(fitl), each = nrow(d)), levels = names(fitl))
   ret[['dout']] <- dout
 
@@ -742,14 +748,22 @@ gapplot <- function(obj, data = obj$gaps_each, log = FALSE, rot = 45,
     disp(data$coef)
   }
   disp(data$coef)
-  xyplot(coef ~ model,
+  data$gr_ <- with(data, reorder(factor(data[[obj$names$gname]]), - coef))
+  fmla <- "coef ~ model"
+  if(!is.null(obj$names$cond)) {
+    fmla <- paste(fmla, "|" , paste(obj$names$cond, collapse = '*'))
+  }
+  fmla <- as.formula(fmla)
+
+  xyplot(fmla,
          data, ...,
-         groups = data[[obj$names$gname]], type = 'b',
+#         groups = data[[obj$names$gname]], type = 'b',
+         groups = gr_, type = 'b',
          scales = list(y =
                          list(at = at,
                               labels = fmt(at,0)),
                        x = list(rot = rot)),
-         ylab = 'Adjusted salary difference\nfrom comparator group',
+         ylab = 'Group-weighted adjusted salary gap\nfrom comparator group',
          xlab = "Cumulatively adjusted factors",
          auto.key = auto.key)+
     layer_(panel.grid(v=-1,h=-1))

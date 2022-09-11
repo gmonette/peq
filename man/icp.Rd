@@ -4,7 +4,7 @@
 \alias{icp}
 \title{Graphical comparison of AIC and BIC}
 \usage{
-icp(ll, ..., rot = 0, srt = rot)
+icp(ll, ...)
 }
 \arguments{
 \item{ll}{a list of models using the same data.}

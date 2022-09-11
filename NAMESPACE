@@ -2,7 +2,9 @@
 
 export(add_rownames)
 export(addn)
+export(aic)
 export(ak)
+export(bic)
 export(combine_small_levels)
 export(decomp)
 export(decomp2)
