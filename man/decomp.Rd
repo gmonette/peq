@@ -5,7 +5,14 @@
 \alias{decomp2}
 \title{Decompose pay gaps suing a sequence of models}
 \usage{
-decomp(fitl, g, comp, data = na.omit(getD(full)), refit = TRUE)
+decomp(
+  fitl,
+  g,
+  comp,
+  data = na.omit(getD(full)),
+  refit = TRUE,
+  verbose = FALSE
+)
 
 decomp2(fitl, g, comp, data = na.omit(getD(full)), cond = NULL, refit = TRUE)
 }
