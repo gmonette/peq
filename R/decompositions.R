@@ -110,8 +110,9 @@ icp <- function(ll, ..., rot = 0, srt = rot){
 #' library(spida2)
 #' }
 #' @export
-decomp <- function(fitl, g, comp, data = na.omit(getD(full)), refit = TRUE) {
-  disp <- function(...) {
+decomp <- function(fitl, g, comp, data = na.omit(getD(full)), refit = TRUE,
+                   verbose = FALSE) {
+  if(verbose == FALSE) disp <- function(...) {
     NULL
   }
   # exportPattern("^[[:alpha:]]+")
@@ -160,6 +161,11 @@ decomp <- function(fitl, g, comp, data = na.omit(getD(full)), refit = TRUE) {
     ret <- seq_along(x)
     names(ret) <- names(x)
     ret
+  }
+
+  addrownames <- function(x) {
+    rownames(x) <- as.character(seq_len(nrow(x)))
+    x
   }
 
   #
@@ -278,14 +284,14 @@ decomp <- function(fitl, g, comp, data = na.omit(getD(full)), refit = TRUE) {
                                         })
 
 
-  ret[['gaps']] <- gaps
+  ret[['gaps']] <- gaps %>% addrownames
   ret[['resids']] <- resids
   ret[['resids2']] <- resids2
   # disp(resids2)
   # disp(unlist(resids2) > 10^(-11))
   if(any(unlist(resids2) > 10^(-11))) warning('Some models may not be nested in last model. See resids2')
 
-  ret[['pred']] <- pred
+  ret[['pred']] <- pred %>% addrownames
 
   #
   # gaps calculated from individual models
@@ -302,8 +308,8 @@ decomp <- function(fitl, g, comp, data = na.omit(getD(full)), refit = TRUE) {
       attr(Lmat, 'data') <- subset(data, model == names(fitl)[ii])
       waldf(fitl[[ii]], Lmat)
     })
-  ret[['gaps_each']] <-Ls_each %>% lapply(subset, select = -L) %>% do.call(rbind,.)
-
+  ret[['gaps_each']] <- Ls_each %>% lapply(subset, select = -L)  %>%
+    do.call(rbind,.) %>% addrownames
 
 
   ## Comparing fitted values from 'predict' and from X %*% beta ------ is okay
@@ -410,6 +416,11 @@ decomp2 <- function(fitl, g, comp, data = na.omit(getD(full)), cond = NULL, refi
     names(ret) <- names(x)
     ret
   }
+  addrownames <- function(x) {
+    rownames(x) <- as.character(seq_len(nrow(x)))
+    x
+  }
+
   incmat <- function(d1, d2) {
     # incidence matrix for position in d2 for combinations of values in d1
     # d1 and d2 are data frames with variables in d1 a subset of variables in d2
@@ -550,14 +561,14 @@ decomp2 <- function(fitl, g, comp, data = na.omit(getD(full)), cond = NULL, refi
                                           Bs[[ii]] - Bs_qr[[ii]]
                                         })
 
-  ret[['gaps']] <- gaps
+  ret[['gaps']] <- gaps %>% addrownames
   ret[['resids']] <- resids
   ret[['resids2']] <- resids2
   # disp(resids2)
   # disp(unlist(resids2) > 10^(-11))
   if(any(unlist(resids2) > 10^(-11))) warning('Some models may not be nested in last model. See resids2')
 
-  ret[['pred']] <- pred
+  ret[['pred']] <- pred %>% addrownames
 
   #
   # gaps calculated from individual models
@@ -574,7 +585,7 @@ decomp2 <- function(fitl, g, comp, data = na.omit(getD(full)), cond = NULL, refi
       attr(Lmat, 'data') <- subset(data, model == names(fitl)[ii])
       waldf(fitl[[ii]], Lmat)
     })
-  ret[['gaps_each']] <-Ls_each %>% lapply(subset, select = -L) %>% do.call(rbind,.)
+  ret[['gaps_each']] <-Ls_each %>% lapply(subset, select = -L) %>% do.call(rbind,.) %>% addrownames
 
   ## Comparing fitted values from 'predict' and from X %*% beta ------ is okay
 
@@ -721,7 +732,7 @@ gapplot <- function(obj, data = obj$gaps_each, log = FALSE, rot = 45,
   library(latticeExtra)
   library(spida2)
   disp <- function(...) {
-    NULL
+   NULL
   }
   # Used gresids but then reverted to gaps_each after checking consistency
   dollar_gap <- function(x, reference) {
@@ -729,6 +740,12 @@ gapplot <- function(obj, data = obj$gaps_each, log = FALSE, rot = 45,
     lnt <- function(x)  100 * log(x)
     et(x + reference) - et(reference)
   }
+  orig_gap <- function(gap, pred) {
+    # gap and pred in 100 x ln(salary)
+    # pred is predicted for group, not comparator
+    exp(pred/100) * (1 - exp(-gap/100))
+  }
+
 #  data$coef <- with(data, capply(gresids, data[,c(obj$names$gname,'model')], mean, na.rm = T))
 #  form <- as.formula(paste('~', obj$names$gname, "+ model"))
 #  disp(dim(data))
@@ -738,7 +755,7 @@ gapplot <- function(obj, data = obj$gaps_each, log = FALSE, rot = 45,
 #  print_data$coef <- fmt(print_data$coef)
 #  disp(print_data)
 #  if(log) stop('log might not be working correctly dt dout fix')
-  if(log) {
+  if(FALSE) {  # won't work if subset selected
     disp(obj$names$gname)
     disp(names(obj$pred))
     disp( obj$pred[[obj$names$gname]])
@@ -750,6 +767,15 @@ gapplot <- function(obj, data = obj$gaps_each, log = FALSE, rot = 45,
     disp(data$coef)
     data$coef <- dollar_gap(data$coef, ref)
     disp(data$coef)
+  }
+
+  if(log) {  # should work with subset if log
+    disp(dim(data))
+    disp(head(data))
+    disp(dim(obj$pred))
+    disp(head(obj$pred))
+    pred <- obj$pred[rownames(data),]
+    data$coef <- orig_gap(data$coef,pred$coef)
   }
   disp(data$coef)
   data$gr_ <- with(data, reorder(factor(data[[obj$names$gname]]), - coef))
@@ -764,9 +790,9 @@ gapplot <- function(obj, data = obj$gaps_each, log = FALSE, rot = 45,
 #         groups = data[[obj$names$gname]], type = 'b',
          groups = gr_, type = 'b',
          scales = list(y =
-                         list(at = at,
+                         list(at = at, alternating = 1,
                               labels = fmt(at,0)),
-                       x = list(rot = rot)),
+                       x = list(rot = rot, alternating = 1)),
          ylab = 'Group-weighted adjusted salary gap\nfrom comparator group',
          xlab = "Cumulatively adjusted factors",
          auto.key = auto.key)+
@@ -866,11 +892,503 @@ else  xyplot(gresids ~ data[[obj$names$gname]] | model,
                        stats = qstats.resplot)) +
     layer_(panel.grid(v=-1,h=-1))+
     layer(panel.abline(h=0))
-} # ;  resplot(z, at = seq(-100,110,10),log = T,which = 2, data = subset(z$dout, !model %in%c('full','fit1'))) # end of resplot                                        ## RUN --------------
+} #  resplot(z, at = seq(-100,110,10),log = T,which = 2, data = subset(z$dout, !model %in%c('full','fit1'))) # end of resplot                                        ## RUN --------------
 
 ## testing ####
 
 # test decomp2
+#
+#' Table of gaps, percent gaps from model fitting log salaries
+#'
+#' @param z output of decomp2 or decomp1 (untested)
+#'
+#' @export
+decomp_table <- function(x, log = TRUE, p = TRUE) {
+  if(log) {
+    decomp_table_log(x, p = p)
+  }
+  else {
+    decomp_table_raw(x, p = p)
+  }
+}
+#' @export
+decomp_table_log <- function(z, p = TRUE){
+  #
+  # This is the version for log models with p-values for gaps
+  #
+  # z is the result of using decomp or decomp2 on a list of models
+  #
+  orig_gap <- function(gap, pred) {
+    # gap and pred in 100 x ln(salary)
+    # pred is predicted for group, not comparator
+    exp(pred/100) * (1 - exp(-gap/100))
+  }
+  sel <- function(arr, ind) {
+    do.call(`[`,c(list(arr), ind))
+  }
+  fmtpc <- function(x, nsmall) {
+    ret <- fmt(x, nsmall)
+    ret <- paste0(ret,"\\percent" )
+    ret
+  }
+  clean <- function(x) {
+    #where <- x
+    x[] <- gsub("-Inf","  NA", x)
+    where <- grepl('Inf|NaN', x)
+    x[where] <- ''
+    where <- grepl('Inf|NaN', x)
+    x[where] <- ''
+    x
+  }
+  #
+  # need to merge predictions and gaps
+  # allgaps is function of g, model, cond vars and type
+  # pred is function of g, model, cond vars
+  #
+  # Easier to work on gaps each and take differences
+  #
+  # If we need p-values then we'll need to use gapdiffs
+  #
+  #
+  gaps <- z$gaps_each
+  pred <- z$pred
+  fmla <- as.formula(paste('coef ~ ', paste(c(z$names$gname,"model", z$names$cond), collapse = '+')))
+  fmla_n <-  as.formula(paste(' ~ ', paste(c(z$names$gname, z$names$cond), collapse = '+')))
+  fmla_p <- as.formula(paste('`p-value` ~ ', paste(c(z$names$gname,"model", z$names$cond), collapse = '+')))  #new
+
+  gap_tab <- tab__(fmla, gaps)
+  pred_tab <- tab__(fmla, pred)
+  n_tab <- tab__(fmla_n, z$data)
+  p_tab <- tab__(fmla_p, gaps)   # new
+
+  value_tab <- gap_tab
+  value_tab[] <- orig_gap(gap_tab, pred_tab)    # percent to dollar value
+  p_tab[] <- pfmt(p_tab)
+  p_tab[] <- paste0("p:",p_tab)
+
+  # Work out reductions by using difference
+
+  dims <- dim(value_tab)
+  inds1 <- indslast <- inds <- lapply(dims, seq_len)
+  indslast[[2]] <- indslast[[2]][-1]
+  inds1[[2]] <- inds1[[2]][-length(inds1[[2]])]
+
+  gap_diffs <- do.call('[', c(list(gap_tab), indslast)) -
+    do.call('[', c(list(gap_tab), inds1))
+
+  val_diffs <- do.call('[', c(list(value_tab), indslast)) -
+    do.call('[', c(list(value_tab), inds1))
+
+  # set up indices for large table combining gaps and reductions
+
+  dims_ret <- dims
+  dims_ret[2] <- 2* dims_ret[2] # one column for N, dims_ret[2] for gaps
+  # and dim_ret[2] - 1 for reductions
+  inds <- lapply(dims_ret, seq_len)
+
+  ret1 <- array('', dims_ret)    # row 1 of each cell
+
+  # add N in row 1 first column
+  #
+  ii <- inds
+  ii[[2]] <- 1
+
+  ret1 <- do.call("[<-", c(list(ret1),ii, list(fmt(n_tab,0))))
+
+  # add gap pcts in row 1 gap columns
+
+  ii[[2]] <- seq(2,dim(ret1)[2],2)
+  ret1 <- do.call("[<-", c(list(ret1),ii, list(fmtpc(gap_tab,1))))
+
+  # add reductions in row 1 diff columns
+
+  ii[[2]] <- seq(3,dim(ret1)[2],2)
+  ret1 <- do.call("[<-", c(list(ret1),ii, list(fmtpc(gap_diffs,1))))
 
 
+  # Row 2 add values
+
+  ret2 <- array('', dims_ret)    # row 2 of each cell
+
+  # Add gap dollar value in row gap columns
+
+  ii[[2]] <- seq(2,dim(ret2)[2],2)
+  ret2 <- do.call("[<-", c(list(ret2),ii, list(fmt(value_tab,0))))
+
+  # Add reductions in dollar value in row 2 reduction columns
+
+  ii[[2]] <- seq(3,dim(ret1)[2],2)
+  ret2 <- do.call("[<-", c(list(ret2),ii, list(fmt(val_diffs,0))))
+
+  if(p) {
+
+    # make row 3 with p-values
+
+    ret3 <- array(' ', dims_ret)     # row 3 of each cell (no-empty for prevent vertical centering)
+    ii[[2]] <- seq(2,dim(ret3)[2],2)
+    ret3 <- do.call("[<-", c(list(ret3),ii, list(p_tab)))
+
+  }
+  ret <- ret1
+  if(p) ret[] <- kbind(ret1, '\n', ret2, '\n', ret3)
+  else ret[] <- kbind(ret1, '\n', ret2)
+
+
+  dimnames(ret)[[1]] <- dimnames(gap_tab)[[1]]
+  if(length(ii) > 2){
+    dimnames(ret)[seq(3,length(ii))] <- dimnames(gap_tab)[seq(3,length(ii))]
+  }
+
+  droplast <- function(x) x[-length(x)]
+  dimnames(ret)[[2]] <- droplast(c("N",rbind(dimnames(gap_tab)[[2]],"Reduction")))
+  names(dimnames(ret)) <- names(dimnames(gap_tab))
+  # class(ret) <- 'decomp_table_log'
+  ret <- as.table(ret)
+  clean(ret)
+}
+# decomp_table_log(z) %>% k_(' ') %>% ksf
+# decomp_table_log(z, p = F) %>% k_(' ') %>% ksf
+
+
+# new version with p-value option
+#' @export
+decomp_table_raw <- function(z, p = TRUE){
+  #
+  # This is the version for models were raw gaps are not transformed to dollar gaps
+  #
+  # z is the result of using decomp or decomp2 on a list of models
+  #
+  # Not needed:
+  orig_gap <- function(gap, pred) {
+    # gap and pred in 100 x ln(salary)
+    # pred is predicted for group, not comparator
+    exp(pred/100) * (1 - exp(-gap/100))
+  }
+  sel <- function(arr, ind) {
+    do.call(`[`,c(list(arr), ind))
+  }
+  # Not needed:
+  #
+  # fmtpc <- function(x, nsmall) {
+  #   ret <- fmt(x, nsmall)
+  #   ret <- paste0(ret,"\\percent" )
+  #   ret
+  # }
+  clean <- function(x) {
+    #where <- x
+    x[] <- gsub("-Inf","  NA", x)
+    where <- grepl('Inf|NaN', x)
+    x[where] <- ''
+    where <- grepl('Inf|NaN', x)
+    x[where] <- ''
+    x
+  }
+  #
+  # need to merge predictions and gaps
+  # allgaps is function of g, model, cond vars and type
+  # pred is function of g, model, cond vars
+  #
+  # Easier to work on gaps each and take differences
+  #
+  # If we need p-values then we'll need to use gapdiffs
+  #
+  # Still need to work out 'value' because it's used later for dimensions, etc.
+  #
+  gaps <- z$gaps_each
+  pred <- z$pred
+  fmla <- as.formula(paste('coef ~ ', paste(c(z$names$gname,"model", z$names$cond), collapse = '+')))
+  fmla_n <-  as.formula(paste(' ~ ', paste(c(z$names$gname, z$names$cond), collapse = '+')))
+  fmla_p <- as.formula(paste('`p-value` ~ ', paste(c(z$names$gname,"model", z$names$cond), collapse = '+')))  #new
+
+  gap_tab <- tab__(fmla, gaps)
+  pred_tab <- tab__(fmla, pred)
+  n_tab <- tab__(fmla_n, z$data)
+  p_tab <- tab__(fmla_p, gaps)   # new
+
+  value_tab <- gap_tab
+  value_tab[] <- orig_gap(gap_tab, pred_tab)    # percent to dollar value
+  p_tab[] <- pfmt(p_tab)
+  p_tab[] <- paste0("p:",p_tab)
+
+  # Work out reductions by using difference
+
+  dims <- dim(value_tab)
+  inds1 <- indslast <- inds <- lapply(dims, seq_len)
+  indslast[[2]] <- indslast[[2]][-1]
+  inds1[[2]] <- inds1[[2]][-length(inds1[[2]])]
+
+  gap_diffs <- do.call('[', c(list(gap_tab), indslast)) -
+    do.call('[', c(list(gap_tab), inds1))
+
+  val_diffs <- do.call('[', c(list(value_tab), indslast)) -
+    do.call('[', c(list(value_tab), inds1))
+
+  # set up indices for large table combining gaps and reductions
+
+  dims_ret <- dims
+  dims_ret[2] <- 2* dims_ret[2] # one column for N, dims_ret[2] for gaps
+  # and dim_ret[2] - 1 for reductions
+  inds <- lapply(dims_ret, seq_len)
+
+  ret1 <- array('', dims_ret)    # row 1 of each cell
+
+  # add N in row 1 first column
+  #
+  ii <- inds
+  ii[[2]] <- 1
+
+  ret1 <- do.call("[<-", c(list(ret1),ii, list(fmt(n_tab,0))))
+
+  # add gap raw in row 1 gap columns
+
+  ii[[2]] <- seq(2,dim(ret1)[2],2)
+  ret1 <- do.call("[<-", c(list(ret1),ii, list(fmt(gap_tab,0))))
+
+  # add reductions in row 1 diff columns
+
+  ii[[2]] <- seq(3,dim(ret1)[2],2)
+  ret1 <- do.call("[<-", c(list(ret1),ii, list(fmt(gap_diffs,0))))
+
+
+  # # Row 2 add values
+  #
+  # ret2 <- array('', dims_ret)    # row 2 of each cell
+  #
+  # # Add gap dollar value in row gap columns
+  #
+  # ii[[2]] <- seq(2,dim(ret2)[2],2)
+  # ret2 <- do.call("[<-", c(list(ret2),ii, list(fmt(value_tab,0))))
+  #
+  # # Add reductions in dollar value in row 2 reduction columns
+  #
+  # ii[[2]] <- seq(3,dim(ret1)[2],2)
+  # ret2 <- do.call("[<-", c(list(ret2),ii, list(fmt(val_diffs,0))))
+
+  if(p) {
+
+    # make row 3 with p-values
+
+    ret3 <- array(' ', dims_ret)     # row 3 of each cell (no-empty for prevent vertical centering)
+    ii[[2]] <- seq(2,dim(ret3)[2],2)
+    ret3 <- do.call("[<-", c(list(ret3),ii, list(p_tab)))
+
+  }
+  ret <- ret1
+  if(p) ret[] <- kbind(ret1, '\n', ret3)
+  else ret[] <- kbind(ret1)
+
+
+  dimnames(ret)[[1]] <- dimnames(gap_tab)[[1]]
+  if(length(ii) > 2){
+    dimnames(ret)[seq(3,length(ii))] <- dimnames(gap_tab)[seq(3,length(ii))]
+  }
+
+  droplast <- function(x) x[-length(x)]
+  dimnames(ret)[[2]] <- droplast(c("N",rbind(dimnames(gap_tab)[[2]],"Reduction")))
+  names(dimnames(ret)) <- names(dimnames(gap_tab))
+  # class(ret) <- 'decomp_table_log'
+  ret <- as.table(ret)
+  clean(ret)
+}
+
+
+
+decomp_table_log_original <- function(z){
+  # z is the result of using decomp or decomp2 on a list of models
+  orig_gap <- function(gap, pred) {
+    # gap and pred in 100 x ln(salary)
+    # pred is predicted for group, not comparator
+    exp(pred/100) * (1 - exp(-gap/100))
+  }
+  sel <- function(arr, ind) {
+    do.call(`[`,c(list(arr), ind))
+  }
+  fmtpc <- function(x, nsmall) {
+    ret <- fmt(x, nsmall)
+    ret <- paste0(ret,"\\percent" )
+    ret
+  }
+  #
+  # need to merge predictions and gaps
+  # allgaps is function of g, model, cond vars and type
+  # pred is function of g, model, cond vars
+  #
+  # Easier to work on gaps each and take differences
+  #
+  # If we need p-values then we'll need to use gapdiffs
+  #
+  #
+  gaps <- z$gaps_each
+  pred <- z$pred
+  fmla <- as.formula(paste('coef ~ ', paste(c(z$names$gname,"model", z$names$cond), collapse = '+')))
+  fmla_n <-  as.formula(paste(' ~ ', paste(c(z$names$gname, z$names$cond), collapse = '+')))
+  fmla_p <- as.formula(paste('`p-value` ~ ', paste(c(z$names$gname,"model", z$names$cond), collapse = '+')))
+
+  gap_tab <- tab__(fmla, gaps)
+  pred_tab <- tab__(fmla, pred)
+  n_tab <- tab__(fmla_n, z$data)
+  p_tab <- tab__(fmla_p, gaps)
+
+  value_tab <- gap_tab
+  value_tab[] <- orig_gap(gap_tab, pred_tab)
+
+  dims <- dim(value_tab)
+  inds1 <- indslast <- inds <- lapply(dims, seq_len)
+  indslast[[2]] <- indslast[[2]][-1]
+  inds1[[2]] <- inds1[[2]][-length(inds1[[2]])]
+
+  gap_diffs <- do.call('[', c(list(gap_tab), indslast)) -
+    do.call('[', c(list(gap_tab), inds1))
+
+  val_diffs <- do.call('[', c(list(value_tab), indslast)) -
+    do.call('[', c(list(value_tab), inds1))
+
+  dims_ret <- dims
+  dims_ret[2] <- 2* dims_ret[2] # one column for N, dims_ret[2] for gaps
+                                # and dim_ret[2] - 1 for reductions
+  inds <- lapply(dims_ret, seq_len)
+
+  ret1 <- array('', dims_ret)    # row 1 of each cell
+
+  # add N in row 1 first column
+  ii <- inds
+  ii[[2]] <- 1
+
+  ret1 <- do.call("[<-", c(list(ret1),ii, list(fmt(n_tab,0))))
+
+  # add gap pcts in row 1 gap columns
+
+  ii[[2]] <- seq(2,dim(ret1)[2],2)
+  ret1 <- do.call("[<-", c(list(ret1),ii, list(fmtpc(gap_tab,1))))
+  ii[[2]] <- seq(3,dim(ret1)[2],2)
+  ret1 <- do.call("[<-", c(list(ret1),ii, list(fmtpc(gap_diffs,1))))
+
+
+  # Row 2 add values
+
+  ret2 <- array('', dims_ret)    # row 2 of each cell
+
+  ii[[2]] <- seq(2,dim(ret2)[2],2)
+  ret2 <- do.call("[<-", c(list(ret2),ii, list(fmt(value_tab,0))))
+  ii[[2]] <- seq(3,dim(ret1)[2],2)
+  ret2 <- do.call("[<-", c(list(ret2),ii, list(fmt(val_diffs,0))))
+  dim(ret1)
+  dim(ret2)
+  ret <- ret1
+  ret[] <- kbind(ret1,'\n',ret2)
+
+  dimnames(ret)[[1]] <- dimnames(gap_tab)[[1]]
+  if(length(ii) > 2){
+    dimnames(ret)[seq(3,length(ii))] <- dimnames(gap_tab)[seq(3,length(ii))]
+  }
+
+  droplast <- function(x) x[-length(x)]
+  dimnames(ret)[[2]] <- droplast(c("N",rbind(dimnames(gap_tab)[[2]],"Reduction")))
+  names(dimnames(ret)) <- names(dimnames(gap_tab))
+  # class(ret) <- 'decomp_table_log'
+  as.table(ret)
+}
+
+# new version with p-value option
+
+decomp_table_log_original2 <- function(z, p = TRUE){
+  # z is the result of using decomp or decomp2 on a list of models
+  orig_gap <- function(gap, pred) {
+    # gap and pred in 100 x ln(salary)
+    # pred is predicted for group, not comparator
+    exp(pred/100) * (1 - exp(-gap/100))
+  }
+  sel <- function(arr, ind) {
+    do.call(`[`,c(list(arr), ind))
+  }
+  fmtpc <- function(x, nsmall) {
+    ret <- fmt(x, nsmall)
+    ret <- paste0(ret,"\\percent" )
+    ret
+  }
+  #
+  # need to merge predictions and gaps
+  # allgaps is function of g, model, cond vars and type
+  # pred is function of g, model, cond vars
+  #
+  # Easier to work on gaps each and take differences
+  #
+  # If we need p-values then we'll need to use gapdiffs
+  #
+  #
+  gaps <- z$gaps_each
+  pred <- z$pred
+  fmla <- as.formula(paste('coef ~ ', paste(c(z$names$gname,"model", z$names$cond), collapse = '+')))
+  fmla_n <-  as.formula(paste(' ~ ', paste(c(z$names$gname, z$names$cond), collapse = '+')))
+  fmla_p <- as.formula(paste('`p-value` ~ ', paste(c(z$names$gname,"model", z$names$cond), collapse = '+')))  #new
+
+  gap_tab <- tab__(fmla, gaps)
+  pred_tab <- tab__(fmla, pred)
+  n_tab <- tab__(fmla_n, z$data)
+  p_tab <- tab__(fmla_p, gaps)   # new
+
+  value_tab <- gap_tab
+  value_tab[] <- orig_gap(gap_tab, pred_tab)
+  p_tab[] <- pfmt(p_tab)
+
+
+  dims <- dim(value_tab)
+  inds1 <- indslast <- inds <- lapply(dims, seq_len)
+  indslast[[2]] <- indslast[[2]][-1]
+  inds1[[2]] <- inds1[[2]][-length(inds1[[2]])]
+
+  gap_diffs <- do.call('[', c(list(gap_tab), indslast)) -
+    do.call('[', c(list(gap_tab), inds1))
+
+  val_diffs <- do.call('[', c(list(value_tab), indslast)) -
+    do.call('[', c(list(value_tab), inds1))
+
+  dims_ret <- dims
+  dims_ret[2] <- 2* dims_ret[2] # one column for N, dims_ret[2] for gaps
+  # and dim_ret[2] - 1 for reductions
+  inds <- lapply(dims_ret, seq_len)
+
+  ret1 <- array('', dims_ret)    # row 1 of each cell
+
+  # add N in row 1 first column
+  ii <- inds
+  ii[[2]] <- 1
+
+  ret1 <- do.call("[<-", c(list(ret1),ii, list(fmt(n_tab,0))))
+
+  # add gap pcts in row 1 gap columns
+
+  ii[[2]] <- seq(2,dim(ret1)[2],2)
+  ret1 <- do.call("[<-", c(list(ret1),ii, list(fmtpc(gap_tab,1))))
+  ii[[2]] <- seq(3,dim(ret1)[2],2)
+  ret1 <- do.call("[<-", c(list(ret1),ii, list(fmtpc(gap_diffs,1))))
+
+
+  # Row 2 add values
+
+  ret2 <- array('', dims_ret)    # row 2 of each cell
+
+  ii[[2]] <- seq(2,dim(ret2)[2],2)
+  ret2 <- do.call("[<-", c(list(ret2),ii, list(fmt(value_tab,0))))
+  ii[[2]] <- seq(3,dim(ret1)[2],2)
+  ret2 <- do.call("[<-", c(list(ret2),ii, list(fmt(val_diffs,0))))
+  dim(ret1)
+  dim(ret2)
+  ret <- ret1
+  ret[] <- kbind(ret1,'\n',ret2)
+
+  ###########################3  ADD ROW 3 HERE
+
+
+  dimnames(ret)[[1]] <- dimnames(gap_tab)[[1]]
+  if(length(ii) > 2){
+    dimnames(ret)[seq(3,length(ii))] <- dimnames(gap_tab)[seq(3,length(ii))]
+  }
+
+  droplast <- function(x) x[-length(x)]
+  dimnames(ret)[[2]] <- droplast(c("N",rbind(dimnames(gap_tab)[[2]],"Reduction")))
+  names(dimnames(ret)) <- names(dimnames(gap_tab))
+  # class(ret) <- 'decomp_table_log'
+  as.table(ret)
+}
 
