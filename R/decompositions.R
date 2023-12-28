@@ -65,35 +65,11 @@ if(FALSE){                                             ## Sample data ----------
       ) %>% rev -> fitl
   }                                      ## RUN sample data ----
 }
-#' Graphical comparison of AIC and BIC
+
+##
+## decomp:  ####
+##
 #'
-#' Compares AIC and BIC for a list of models. The models should have been fitted
-#' to the same data.
-#'
-#' @param ll a list of models using the same data.
-#' @param rot angle to rotate labels
-#'
-#' @export
-icp <- function(ll, ..., rot = 0, srt = rot){
-  if(is.null(names(ll))) {
-    names(ll) <- paste0("model_",seq_along(ll))
-  }
-  a <- aic(ll)
-  b <- bic(ll)
-  a$BIC <- b$BIC
-  a <- sortdf(a, ~ df)
-  tobj <- xyplot(AIC +BIC~ df, a, type = 'l', outer = T,...,
-                 labs = rownames(a), fonts = 2,
-                 subscripts = TRUE,
-                 layout = c(1,2),
-                 srt = srt,
-                 scales = list(y = list(relation = 'free')))+
-    layer(panel.text(..., labels = labs, fonts = 2, srt = srt))
-  print(tobj)
-  print(a)
-  print(sortdf(a, ~ AIC))
-  invisible(ll)
-}
 #' Decompose pay gaps suing a sequence of models
 #'
 #' Pay equity gaps between equity-seeking groups and a comparator
@@ -108,6 +84,199 @@ icp <- function(ll, ..., rot = 0, srt = rot){
 #' \dontrun{
 #' library(peq)
 #' library(spida2)
+#' library(latticeExtra)
+#' library(kableExtra)
+#' simdata <- read.table(header = TRUE, stringsAsFactors = TRUE,text ="
+#' sal  gender  area   age  rank
+#' 100  F       A      30   a   # group A: gap: -10 and -20 for A
+#' 110  F       A      40   b
+#' 120  F       A      50   b
+#' 120  M       A      40   a
+#' 130  M       A      50   b
+#' 140  M       A      60   b
+#' 100  A       A      40   a
+#' 110  F       B      30   a # group B: gap: -20 and -30 for A
+#' 130  M       B      30   a
+#' 140  M       B      40   a
+#' 140  M       B      40   b
+#' 149  M       B      50   b
+#' 150  M       B      50   c
+#' 151  M       B      50   c
+#' 150  M       B      50   b
+#' 150  M       B      50   b
+#' 150  M       B      50   c
+#' 150  M       B      50   c
+#' 150  M       B      50   c
+#' 150  M       B      50   b
+#' 120  A       B      50   b
+#' ")
+#' simdata$gender <- relevel(simdata$gender, 'M')
+#' tps(pch=16)
+#' xyplot(sal ~ age | area, simdata, groups = gender, auto.key = TRUE)
+#'
+#'
+#' contr.helmert(3)
+#' contr.rot <- function(n) {
+#'    ret <- contr.helmert(n)
+#'    disp(ret)
+#'    ret <- t( t(ret)/sqrt(apply(ret^2, 2, sum)))
+#'    ret
+#' }
+#' contr.rot(3)
+#' contr.rot(3) %>% crossprod
+#' ?C
+#'
+#'
+#' contrasts(simdata$gender)
+#'
+#' (fit0 <- lm(sal ~ gender, simdata)) %>% summary
+#' (fit1 <- lm(sal ~ gender + age, simdata)) %>% summary
+#' (fit2 <- lm(sal ~ gender + age + area, simdata)) %>% summary
+#' (fit3 <- lm(sal ~ area/gender + age -1 , simdata)) %>% summary
+#' (fit4 <- lm(sal ~ area/gender + age + rank -1 , simdata)) %>% summary
+#'
+#' fitl <- list(gender = fit0, age = fit1, area = fit2, g_by_a = fit3, rank = fit4)
+#'
+#' pred <- with(simdata, spida2::pred.grid(gender,age,area))
+#' pred$fit3 <- predict(fit3, newdata = pred)
+#'
+#' xyplot(fit3 ~ age | area, pred, groups = gender, type = 'l',auto.key = TRUE) +
+#' xyplot(jitter(sal,10) ~ age | area, simdata, groups = gender, auto.key = TRUE)
+#'
+#' # Using fit1: no effect of area
+#' L1 <- rbind(Agap = c(0,1,0,0),
+#'             Fgap = c(0,0,1,0))
+#' waldf(fit1, L1)
+#'
+#' # Using fit2: additive area
+#' L2 <- rbind(Agap = c(0,1,0,0,0),
+#'             Fgap = c(0,0,1,0,0))
+#' waldf(fit2, L2)
+#'
+#' # Using fit3: no effect of area
+#' L3 <- rbind("Agap in A" = c(0,0,0,1,0,0,0),
+#'             "Fgap in A" = c(0,0,0,0,0,1,0),
+#'             "Agap in B" = c(0,0,0,0,1,0,0),
+#'             "Fgap in B" = c(0,0,0,0,0,0,1))
+#' waldf(fit3, L3)
+#'
+#' SEs <-   waldf(fit3, L3)$se
+#' wts <- 1/SEs^2   # precision weights
+#'
+#' # Type III average over Areas
+#'
+#' W3 <- rbind( A3 = std(c(1, 0 , 1, 0)),
+#'              F3 = std(c(0, 1 , 0, 1)))
+#' W3
+#'
+#' # Average by size of Areas  (dubious)
+#'
+#' nArea <- tab__(simdata, ~ area)
+#' nArea <- nArea[c(1,1,2,2)]
+#'
+#' Wsize <- rbind(
+#'     AnA = std(nArea * c(1,0,1,0)),
+#'     FnA = std(nArea * c(0,1,0,1))
+#' )
+#' Wsize
+#'
+#' # Average by size of equity group
+#'
+#' ## Compare relative weights of different methods
+#' ## Idea: Using additive model may give reasonable weights if no group is very small
+#' ## but bad idea for very small groups were the gap might not reflect the
+#' ## average **experience** of members of the small group.
+#' ## Weights will tend to look like (1/nF + 1/nM)^1 which will look like nF if small ..... so ....
+#' ## ... but maybe not so simple with other adjustment variables like age, etc....
+#'
+#' ns <- tab__(simdata, ~ gender + area)
+#' ns
+#' Weqn <- rbind(
+#'     AnA = std(c(ns['A','A'],0,ns['A','B'],0)),
+#'     FnA = std(c(0,ns['F','A'],0,ns['F','B']))
+#' )
+#' Weqn
+#'
+#' waldf(fit3, W3 %*% L3)
+#' waldf(fit3, Wsize %*% L3)
+#' waldf(fit3, Weqn %*% L3)
+#'
+#' decomp(fitl, 'gender', 'M') %>% gapplot
+#' decomp2(fitl, 'gender', 'M', cond = 'area') %>% gapplot
+#'
+#' decomp(fitl, 'gender', 'M') %>% decomp_table(log=FALSE)
+#' decomp(fitl, 'gender', 'M') %>% decomp_table(log=TRUE)
+#' decomp2(fitl, 'gender', 'M', cond = 'area') %>% gapplot
+#' decomp2(fitl, 'gender', 'M', cond = 'rank') %>% gapplot
+#'
+#' # TODO: Use SEs for fit3 to show how precision weighted means are same as
+#' # gaps obtained from non-interaction model
+#'
+#' decomp2(fitl, 'gender','M', cond = c('area','rank')) %>% gapplot
+#'
+#' #
+#' #
+#' # Simple example with age and gender show
+#' # possibility of a reversal depending
+#' # on the choice of comparator group
+#' #
+#' dage <- read.table(header = TRUE, stringsAsFactors = TRUE,text ="
+#' Gender    Age   Salary
+#' M         30    30000
+#' M         50    50000
+#' M         60    60000
+#' M         65    65000
+#' M         65    65000
+#' M         70    69000
+#' M         70    70000
+#' M         70    71000
+#' F         30    30000
+#' F         40    35000
+#' F         40    36000
+#' F         40    34000
+#' F         50    40000
+#' ")
+#'
+#'
+#' tps(pch=16:17)
+#' xyplot(Salary ~ Age, dage, groups = Gender, alpha = .5)
+#' fit1 <- lm(Salary ~ Gender, dage)
+#' fit2 <- lm(Salary ~ Gender + Age, dage)
+#' fit3 <- lm(Salary ~ Gender * Age, dage)
+#' fitl <- list(Gender=fit1, 'Gender + Age'=fit2, 'Gender * Age'= fit3)
+#' icp(fitl)
+#' decomp(fitl, 'Gender', 'M')
+#' decomp(fitl, 'Gender', 'M') %>% decomp_table
+#' decomp(fitl, 'Gender', 'F') %>% gapplot
+#' decomp(fitl, 'Gender', 'M') %>% gapplot
+#'
+#'
+#' #
+#' # The following is example of a reversal paradox in which
+#' # the direction of the gap is reversed depending on the
+#' # choice of reference groups. This can only occur with
+#' # interaction with Gender in the model and
+#' #
+#'
+#'
+#' dage2 <- within(
+#'   dage,
+#'   {
+#'     Salary2 <- ifelse(Gender == 'F', Salary + 10000, Salary)
+#'   }
+#' )
+#' fit21 <- lm(Salary2 ~ Gender, dage2)
+#' fit22 <- lm(Salary2 ~ Gender + Age, dage2)
+#' fit23 <- lm(Salary2 ~ Gender * Age, dage2)
+#' fit2l <- list(Gender=fit21, 'Gender + Age'=fit22, 'Gender * Age'= fit23)
+#' decomp(fit2l, 'Gender', 'F') %>% decomp_table
+#' decomp(fit2l, 'Gender', 'M') %>% decomp_table
+#' decomp(fit2l, 'Gender', 'F') %>% gapplot
+#' decomp(fit2l, 'Gender', 'M') %>% gapplot
+#'
+#'
+#'
+#'
 #' }
 #' @export
 decomp <- function(fitl, g, comp, data = na.omit(getD(full)), refit = TRUE,
@@ -361,7 +530,7 @@ decomp <- function(fitl, g, comp, data = na.omit(getD(full)), refit = TRUE,
 
   class(ret) <- 'decomp'
   ret
-}                                                           ## END decomp ####
+}
 
 #' @describeIn decomp conditional version with 'cond' argument
 #' @export
@@ -643,7 +812,7 @@ decomp2 <- function(fitl, g, comp, data = na.omit(getD(full)), cond = NULL, refi
 
   class(ret) <- 'decomp'
   ret
-}                                                           ## END decomp2 ####
+}
 
 
 #' svd version of lsfit
@@ -725,6 +894,9 @@ if(FALSE) {
 #'
 #' @export
 gapplot <- function(obj, data = obj$gaps_each, log = FALSE, rot = 45,
+                    ylab = 'Group-weighted adjusted salary gaps',
+                    # ylab = 'Group-weighted adjusted salary gaps\nfrom comparator group',
+                    xlab = 'Cumulatively adjusted factors',
                     at = seq(-200000,100000,10000),
                     auto.key = list(space = 'right'), ...) {
 # gapplot <- function(obj, data = obj$dout, log = FALSE, rot = 45,
@@ -793,8 +965,8 @@ gapplot <- function(obj, data = obj$gaps_each, log = FALSE, rot = 45,
                          list(at = at, alternating = 1,
                               labels = fmt(at,0)),
                        x = list(rot = rot, alternating = 1)),
-         ylab = 'Group-weighted adjusted salary gap\nfrom comparator group',
-         xlab = "Cumulatively adjusted factors",
+         ylab = ylab,
+         xlab = xlab,
          auto.key = auto.key)+
     layer_(panel.grid(v=-1,h=-1))
 
@@ -903,16 +1075,16 @@ else  xyplot(gresids ~ data[[obj$names$gname]] | model,
 #' @param z output of decomp2 or decomp1 (untested)
 #'
 #' @export
-decomp_table <- function(x, log = TRUE, p = TRUE) {
+decomp_table <- function(x, log = TRUE, p = TRUE, n_min = 1) {
   if(log) {
-    decomp_table_log(x, p = p)
+    decomp_table_log(x, p = p, n_min = n_min)
   }
   else {
-    decomp_table_raw(x, p = p)
+    decomp_table_raw(x, p = p, n_min = n_min)
   }
 }
 #' @export
-decomp_table_log <- function(z, p = TRUE){
+decomp_table_log <- function(z, p = TRUE, n_min = 1, reduction = "Change"){
   #
   # This is the version for log models with p-values for gaps
   #
@@ -1030,6 +1202,8 @@ decomp_table_log <- function(z, p = TRUE){
 
   }
   ret <- ret1
+  # disp(ret1[,1])
+  # disp(n_tab)
   if(p) ret[] <- kbind(ret1, '\n', ret2, '\n', ret3)
   else ret[] <- kbind(ret1, '\n', ret2)
 
@@ -1040,19 +1214,42 @@ decomp_table_log <- function(z, p = TRUE){
   }
 
   droplast <- function(x) x[-length(x)]
-  dimnames(ret)[[2]] <- droplast(c("N",rbind(dimnames(gap_tab)[[2]],"Reduction")))
+  dimnames(ret)[[2]] <- droplast(c("N",rbind(dimnames(gap_tab)[[2]],reduction)))
   names(dimnames(ret)) <- names(dimnames(gap_tab))
   # class(ret) <- 'decomp_table_log'
   ret <- as.table(ret)
+
+  # blank if n < n_min
+
+  if(TRUE) {
+
+  retkeep <- ret
+  np <- seq_along(dim(ret))
+  np <- c(np[-2], 2)
+  npinv <- np
+  npinv[np] <- seq_along(np)
+  retkeep <- aperm(retkeep, np)
+  retkeep[] <- c(n_tab)
+  retkeep <- aperm(retkeep, npinv)
+  retkeep <- (retkeep >= n_min) | (slice.index(retkeep, 2) == 1)
+  ret[!retkeep] <- ' '
+  }
+
+
   clean(ret)
 }
-# decomp_table_log(z) %>% k_(' ') %>% ksf
+
+# decomp_table(z, log = T)
+
+# %>% k_(' ') %>% ksf
+
+
 # decomp_table_log(z, p = F) %>% k_(' ') %>% ksf
 
 
 # new version with p-value option
 #' @export
-decomp_table_raw <- function(z, p = TRUE){
+decomp_table_raw <- function(z, p = TRUE, n_min = 1, reduction = 'Change'){
   #
   # This is the version for models were raw gaps are not transformed to dollar gaps
   #
@@ -1184,10 +1381,26 @@ decomp_table_raw <- function(z, p = TRUE){
   }
 
   droplast <- function(x) x[-length(x)]
-  dimnames(ret)[[2]] <- droplast(c("N",rbind(dimnames(gap_tab)[[2]],"Reduction")))
+  dimnames(ret)[[2]] <- droplast(c("N",rbind(dimnames(gap_tab)[[2]],reduction)))
   names(dimnames(ret)) <- names(dimnames(gap_tab))
   # class(ret) <- 'decomp_table_log'
   ret <- as.table(ret)
+
+  # blank if n < n_min
+
+  if(TRUE){
+    retkeep <- ret
+    np <- seq_along(dim(ret))
+    np <- c(np[-2], 2)
+    npinv <- np
+    npinv[np] <- seq_along(np)
+    retkeep <- aperm(retkeep, np)
+    retkeep[] <- c(n_tab)
+    retkeep <- aperm(retkeep, npinv)
+    retkeep <- (retkeep >= n_min) | (slice.index(retkeep, 2) == 1)
+    ret[!retkeep] <- ' '
+  }
+
   clean(ret)
 }
 
@@ -1389,6 +1602,28 @@ decomp_table_log_original2 <- function(z, p = TRUE){
   dimnames(ret)[[2]] <- droplast(c("N",rbind(dimnames(gap_tab)[[2]],"Reduction")))
   names(dimnames(ret)) <- names(dimnames(gap_tab))
   # class(ret) <- 'decomp_table_log'
-  as.table(ret)
+  ret <- as.table(ret)
+  # disp(dim(ret))
+  # ret[n_tab == 0, -1] <-''
+  clean(ret)
+}
+#' Multiple rows for kable
+#'
+#' @param x element in first row
+#' @param ...  additional elements
+#' @param prefix add before first element
+#' @param align 'r', 'l' or 'c', default 'r'
+#' @export
+kbind <-
+function(x,..., prefix = '', align = 'r') {
+  # pasting tables together to possibly have multiple lines
+  # in cells by using: kbind(x,'\n',y)
+  # Note: preformat numbers to control format
+  #
+  # x can have a structure such as a table, matrix, etc.
+  # If the first element does not have the desired structure
+  # for the result, provide it with the 'prefix' argument.
+  x[] <- kableExtra::linebreak(paste0(prefix,x,...), align = align)
+  x
 }
 

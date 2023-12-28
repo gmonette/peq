@@ -1,12 +1,18 @@
 Package: peq
 Type: Package
-Title: What the Package Does (Title Case)
+Title: Pay Equity Pay Gap Decompositions
 Version: 0.1.0
-Author: Who wrote it
-Maintainer: The package maintainer <yourself@somewhere.net>
-Description: More about what it does (maybe more than one line)
-    Use four spaces when indenting paragraphs within the Description.
+Author: Georges Monette <georges@yorku.ca>
+Maintainer: Georges Monette <georges@yorku.ca>
+Description: Tables and plots of equity gaps under
+    nested sequences of models.
 License: What license is it under?
 Encoding: UTF-8
 LazyData: true
-RoxygenNote: 7.2.0
+RoxygenNote: 7.2.3
+Imports: 
+    kableExtra,
+    lattice,
+    latticeExtra,
+    spida2,
+    stats

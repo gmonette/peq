@@ -21,6 +21,6 @@ Works with rank-deficient models (currently not centering)
 }
 \section{Functions}{
 \itemize{
-\item \code{lssvd_old}: oldversion
-}}
+\item \code{lssvd_old()}: oldversion
 
+}}

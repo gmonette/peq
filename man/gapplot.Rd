@@ -9,6 +9,8 @@ gapplot(
   data = obj$gaps_each,
   log = FALSE,
   rot = 45,
+  ylab = "Group-weighted adjusted salary gaps",
+  xlab = "Cumulatively adjusted factors",
   at = seq(-2e+05, 1e+05, 10000),
   auto.key = list(space = "right"),
   ...
