@@ -1,14 +1,14 @@
-## 
-## 
+##
+##
 ## From R/gnew/R/utils.R on 2022_06_23
-## 
-## 
+##
+##
 ## small utilities for bad typists ------
 ##
 #' getAnywhere
-#' 
+#'
 #' @param ... parameters for getAnywhere
-#' 
+#'
 #' @export
 ga <- function(...) {
   getAnywhere(...)
@@ -20,20 +20,20 @@ ga <- function(...) {
 #'
 #' @export
 kb <- function(
-  x, 
+  x,
   caption = NULL,
-  format.args = list(big.mark = ','), 
+  format.args = list(big.mark = ','),
   ...) {
-  kbl(x, 
-      booktabs = T, 
-      linesep = '', 
+  kbl(x,
+      booktabs = T,
+      linesep = '',
       format.args = format.args,
       caption= caption, ...
-  ) %>% 
+  ) %>%
     kable_styling(latex_options = "HOLD_position")
 }
 #' Turn rownames into labelled column for kable
-#'   
+#'
 #' @export
 add_rownames <- function(x, label = names(dimnames(x))[1], ...) {
   x <- cbind(x) # to make it a matrix if it isn't
@@ -44,7 +44,7 @@ add_rownames <- function(x, label = names(dimnames(x))[1], ...) {
   x
 }
 #' Generic round
-#' 
+#'
 #' @export
 rnd <- function(x,...) {
   if(is.numeric(x))  round(x, ...)
@@ -54,15 +54,15 @@ rnd <- function(x,...) {
   } else x
 }
 #' Formatting that thinks it's smart
-#' 
+#'
 #' Chooses number of significant digits semi-intelligently
-#' 
+#'
 #' @param x numeric object to be formatted
-#' @param nsmall, nsig, nright, 
+#' @param nsmall, nsig, nright,
 #' @param scientific FALSE by default
 #' @param big.mark is ',' by default
 #' @param ... other arguments to \code{\link{format}}
-#' 
+#'
 #' @export
 fmt <- function(x, nsmall = ns_(x, nsig, nright), nsig = 4, nright = 1,
                 scientific = FALSE, big.mark = ',',...) {
@@ -83,16 +83,19 @@ fmt <- function(x, nsmall = ns_(x, nsig, nright), nsig = 4, nright = 1,
 ##
 ## Factor utilities ------
 ##
-
+#' @export
 nuniq <- function(x) {
   length(unique(x))
 }
 
+#' @export
 na2na <- function(x, replace , ...) UseMethod('na2na')
+#' @export
 na2na.default <- function(x, replace= "No Answer", ... ) {
   x[is.na(x)] <- replace
   x
 }
+#' @export
 na2na.factor <- function(x, replace= "No Answer", ...) {
   levs <- levels(x)
   x <- as.character(x)
@@ -108,7 +111,7 @@ relevel_last <- function(x, ref, ...) {
   x <- as.factor(x)
   rotate <- function(x) c(x[-1],x[1])
   if(!(ref %in% levels(x))) return( x )
-  ret <- relevel(x, ref, ...) 
+  ret <- relevel(x, ref, ...)
   factor(ret, levels = rotate(levels(ret)))
 }
 
@@ -116,7 +119,7 @@ relevel_last <- function(x, ref, ...) {
 relevel_first <- function(x, ref, ...) {
   x <- as.factor(x)
   if(!(ref %in% levels(x))) return( x )
-  relevel(x, ref, ...) 
+  relevel(x, ref, ...)
 }
 
 
@@ -146,33 +149,33 @@ combine_small_levels <- function(x, size = 6, name = 'Smaller groups') {
 ## Lattice utilities ------
 ##
 #' Auto.key arguments
-#' 
+#'
 #' @export
 ak <- function(reverse.rows = T, lines = T, points = T, ...) {
   list(space = 'right', reverse.rows = reverse.rows, lines = lines,
        points = points)
 }
 #' Set latice parameters for base (not superpose) elements
-#' 
+#'
 #' @export
 td_ <- function(...) td(..., superpose = FALSE)
 #'
 #' Presumably to create a heading
-#' 
+#'
 #' @export
 main <- function(x, line2 = NULL, font = 1, cex = 1, ...) {
   if(!is.null(line2)) x <- paste0(x,'\n',line2)
   list(x, font = font, cex = cex, ...)
 }
 #' tr_gs: special case
-#' 
+#'
 #' @export
 tr_gs <- function(x) {
   x <- tr(x, c("M:F1", "M:FA", "F:F1", "F:FA"), c('Male F1', 'Male FA', 'Female F1', 'Female FA') )
   factor(x, levels =  c('Male F1', 'Female F1','Male FA',  'Female FA'))
 }
 #' add number of occurences in parentheses
-#' 
+#'
 #' @export
 addn <- function(x, big.mark = ',') {
   # add frequency in parentheses
@@ -191,14 +194,14 @@ addn <- function(x, big.mark = ',') {
 ## Miscellaneous ------
 ##
 #' Quick grepv
-#' 
-#' 
+#'
+#'
 #' @export
 g <- function(string, data = dd) {
   grepv(string, names(data))
 }
-#' 
-#' 
+#'
+#'
 #' @export
 reorder_last <- function(x, last) {
   wh <- which(x %in% last)
@@ -206,7 +209,7 @@ reorder_last <- function(x, last) {
   else c(x[-wh], x[wh])
 }
 #' relevel for character vectors
-#' 
+#'
 #' @export
 reorder_first <- function(x, first) {
   wh <- which(x %in% first)

@@ -2,17 +2,25 @@ Package: peq
 Type: Package
 Title: Pay Equity Pay Gap Decompositions
 Version: 0.1.0
+Date: 2024-07-04
 Author: Georges Monette <georges@yorku.ca>
 Maintainer: Georges Monette <georges@yorku.ca>
 Description: Tables and plots of equity gaps under
     nested sequences of models.
-License: What license is it under?
+License:  GPL (>= 2)
 Encoding: UTF-8
-LazyData: true
-RoxygenNote: 7.2.3
+LazyData: TRUE
+VignetteBuilder:
+    knitr,
+    rmarkdown
+Language: en-US
+RoxygenNote: 7.3.1
 Imports: 
     kableExtra,
     lattice,
     latticeExtra,
     spida2,
-    stats
+    stats,
+    knitr,
+    rmarkdown,
+    car
