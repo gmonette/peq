@@ -24,9 +24,11 @@ icp <-
       # names(ll) <- paste0(prefix,seq_along(ll))
       names(ll) <- sapply(ll, function(x) as.character(formula(x)[-c(1,2)]))
     }
+    require(lattice)
+    require(latticeExtra)
     a <- ics(ll)
     a$model <- sapply(ll, formula)
-    a <- sortdf(a, ~ edf)
+    a <- spida2::sortdf(a, ~ edf)
     tobj <- xyplot(AIC +BIC~ edf, a, type = 'l', outer = T,...,
                    labs = rownames(a), fonts = 2,
                    subscripts = TRUE,
@@ -36,7 +38,7 @@ icp <-
       layer(panel.text(..., labels = labs, fonts = 2, srt = srt))
     print(tobj)
     print(a)
-    print(sortdf(a, ~ AIC))
+    print(spida2::sortdf(a, ~ AIC))
     invisible(ll)
   }
 #' AIC and BIC for a list of functions

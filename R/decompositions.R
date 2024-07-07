@@ -892,6 +892,10 @@ if(FALSE) {
 #'
 #' @param decomp a decomp object creaate by \code{\link{decomp}}.
 #'
+#' @import utils
+#' @import stats
+#' @import lattice
+#' @import latticeExtra
 #' @export
 gapplot <- function(obj, data = obj$gaps_each, log = FALSE, rot = 45,
                     ylab = 'Group-weighted adjusted salary gaps',

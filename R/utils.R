@@ -18,6 +18,7 @@ ga <- function(...) {
 ##
 #' Collect options for kbl
 #'
+#' @import kableExtra
 #' @export
 kb <- function(
   x,
@@ -122,12 +123,11 @@ relevel_first <- function(x, ref, ...) {
   relevel(x, ref, ...)
 }
 
-
 #' @export
 relevel_size <- function(x, ord = -capply(x, x, length), ...) {
   reorder(as.factor(x), ord)
 }
-
+#' @import spida2
 #' @export
 combine_small_levels <- function(x, size = 6, name = 'Smaller groups') {
   tofac <- is.factor(x)

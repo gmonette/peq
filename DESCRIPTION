@@ -22,5 +22,5 @@ Imports:
     spida2,
     stats,
     knitr,
-    rmarkdown,
-    car
+    rmarkdown
+    
