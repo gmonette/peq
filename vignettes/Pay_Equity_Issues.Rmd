@@ -1,0 +1,39 @@
+---
+title: "Pay_Equity_Issues"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Pay_Equity_Issues}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(peq)
+```
+
+## Apparrent bugs
+
+- predict.lm (and perhaps others) don't seem to deal with 'newdata' if there is a factor with
+  contrasts other than treatment contrasts (with possibly a different sequence of levels than
+  the lexicographical ordering). The current version of spida2::pred.grid 
+  
+
+## Rank deficient models
+
+Common reasons for a rank deficient model is that 
+
+- there are no members of some 'group' in the data, or, 
+- if there is a categorical interaction with 'group', there is no member of a group in some level of the interacting variable, for example if the interacting variable is 'faculty', if there is a faculty with no member of a particular ESG.
+
+This is not, in principle a problem for decomposition unless the missing category is that of the comparator group. In that case, members of an equity-seeking group may have no comparators.
+
+However, a problem also arises if the comparator group is very small.  In that case there could be an argument for 'borrowing strength' from other units. In the extreme, one would drop the interaction. One could consider treating the interacting variable as a random effect and assessing the consequence of doing that. 
+
+

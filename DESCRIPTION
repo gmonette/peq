@@ -3,11 +3,9 @@ Type: Package
 Title: Pay Equity Pay Gap Decompositions
 Version: 0.1.0
 Date: 2024-07-04
-Author: Georges Monette <georges@yorku.ca>
-Maintainer: Georges Monette <georges@yorku.ca>
 Description: Tables and plots of equity gaps under
     nested sequences of models.
-License:  GPL (>= 2)
+License: AGPL (>= 3)
 Encoding: UTF-8
 LazyData: TRUE
 VignetteBuilder:
@@ -22,5 +20,8 @@ Imports:
     spida2,
     stats,
     knitr,
+    car,
     rmarkdown
-    
+Authors@R: 
+    person("Georges", "Monette", , "georges@yorku.ca", role = c("aut", "cre"),
+    comment = c(ORCID = "0000-0003-0076-5532"))

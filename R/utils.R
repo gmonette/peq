@@ -9,6 +9,7 @@
 #'
 #' @param ... parameters for getAnywhere
 #'
+#' @import utils
 #' @export
 ga <- function(...) {
   getAnywhere(...)
@@ -18,7 +19,11 @@ ga <- function(...) {
 ##
 #' Collect options for kbl
 #'
-#' @import kableExtra
+#' @param x object to print
+#' @param caption default: NULL
+#' @param format.args default: list(big.mark = ',')
+#' @param ... other arguments
+#' @importFrom kableExtra kbl kable_styling
 #' @export
 kb <- function(
   x,
@@ -29,12 +34,15 @@ kb <- function(
       booktabs = T,
       linesep = '',
       format.args = format.args,
-      caption= caption, ...
+      caption = caption, ...
   ) %>%
     kable_styling(latex_options = "HOLD_position")
 }
 #' Turn rownames into labelled column for kable
 #'
+#' @param x object
+#' @param label
+#' @param ... ignored
 #' @export
 add_rownames <- function(x, label = names(dimnames(x))[1], ...) {
   x <- cbind(x) # to make it a matrix if it isn't

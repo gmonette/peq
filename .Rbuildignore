@@ -4,3 +4,4 @@
 ^doc/.*$
 ^etc/.*$
 ^.*bak$
+^LICENSE\.md$
