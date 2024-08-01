@@ -2,9 +2,18 @@
 % Please edit documentation in R/decompositions.R
 \name{decomp_table}
 \alias{decomp_table}
+\alias{decomp_table_raw}
+\alias{decomp_table_log_original}
+\alias{decomp_table_log_original2}
 \title{Table of gaps, percent gaps from model fitting log salaries}
 \usage{
 decomp_table(x, log = TRUE, p = TRUE, n_min = 1)
+
+decomp_table_raw(z, p = TRUE, n_min = 1, reduction = "Change")
+
+decomp_table_log_original(z)
+
+decomp_table_log_original2(z, p = TRUE)
 }
 \arguments{
 \item{z}{output of decomp2 or decomp1 (untested)}
@@ -12,3 +21,12 @@ decomp_table(x, log = TRUE, p = TRUE, n_min = 1)
 \description{
 Table of gaps, percent gaps from model fitting log salaries
 }
+\section{Functions}{
+\itemize{
+\item \code{decomp_table_raw()}: new version with p-value option
+
+\item \code{decomp_table_log_original()}: original version
+
+\item \code{decomp_table_log_original2()}: 'original2' version
+
+}}

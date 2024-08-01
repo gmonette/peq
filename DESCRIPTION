@@ -12,7 +12,7 @@ VignetteBuilder:
     knitr,
     rmarkdown
 Language: en-US
-RoxygenNote: 7.3.1
+RoxygenNote: 7.3.2
 Imports: 
     kableExtra,
     lattice,

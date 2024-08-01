@@ -6,6 +6,13 @@
 \usage{
 add_rownames(x, label = names(dimnames(x))[1], ...)
 }
+\arguments{
+\item{x}{object}
+
+\item{label}{to add for column of rownames}
+
+\item{...}{ignored}
+}
 \description{
 Turn rownames into labelled column for kable
 }

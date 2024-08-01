@@ -1250,8 +1250,7 @@ decomp_table_log <- function(z, p = TRUE, n_min = 1, reduction = "Change"){
 
 # decomp_table_log(z, p = F) %>% k_(' ') %>% ksf
 
-
-# new version with p-value option
+#' @describeIn decomp_table new version with p-value option
 #' @export
 decomp_table_raw <- function(z, p = TRUE, n_min = 1, reduction = 'Change'){
   #
@@ -1409,7 +1408,8 @@ decomp_table_raw <- function(z, p = TRUE, n_min = 1, reduction = 'Change'){
 }
 
 
-
+#' @describeIn decomp_table original version
+#' @export
 decomp_table_log_original <- function(z){
   # z is the result of using decomp or decomp2 on a list of models
   orig_gap <- function(gap, pred) {
@@ -1506,8 +1506,8 @@ decomp_table_log_original <- function(z){
   as.table(ret)
 }
 
-# new version with p-value option
-
+#' @describeIn decomp_table 'original2' version
+#' @export
 decomp_table_log_original2 <- function(z, p = TRUE){
   # z is the result of using decomp or decomp2 on a list of models
   orig_gap <- function(gap, pred) {
@@ -1630,4 +1630,427 @@ function(x,..., prefix = '', align = 'r') {
   x[] <- kableExtra::linebreak(paste0(prefix,x,...), align = align)
   x
 }
+###
+###  Gap   #################
+###
+#' Create a Gap object for a single model to plot or make tables
+#'
+#' **CHECK THIS:** Fits a model with lm and plots **weighted adjusted gaps** or
+#' simply **adjusted gaps** depending on the inclusion/exclusion of
+#' variables in the plotting formula relative to the fitting formula.
+#'
+#' @param formula model formula for fitting with \code{\link{lm}}
+#'        or fitted model. The
+#'        **grouping variable** should be first so that \code{\link{subrow}}
+#'        will differentiate correctly. **Maybe only pred matters**
+#' @param data data set
+#' @param pred prediction data set. It should include all variables in the
+#'        model formula. The grouping variable should be first so that
+#'        \code{\link{subrow}} will differentiate correctly.
+#' @param groupvar name of grouping variable. Default: Gender
+#' @param complevel level of groupvar that is used as comparator. Default: 'M'
+#' @param ... additional parameters not currently used
+#'
+#' @examples
+#' \dontrun{
+#'
+#' # data and initial part copied from 'decomp'
+#'
+#' library(peq)
+#' library(spida2)
+#' library(latticeExtra)
+#' library(kableExtra)
+#' simdata <- read.table(header = TRUE, stringsAsFactors = TRUE,text ="
+#' sal  gender  area   age  rank
+#' 100  F       A      30   a   # group A: gap: -10 and -20 for A
+#' 110  F       A      40   b
+#' 120  F       A      50   b
+#' 120  M       A      40   a
+#' 130  M       A      50   b
+#' 140  M       A      60   b
+#' 100  A       A      40   a
+#' 110  F       B      30   a # group B: gap: -20 and -30 for A
+#' 130  M       B      30   a
+#' 140  M       B      40   a
+#' 140  M       B      40   b
+#' 149  M       B      50   b
+#' 150  M       B      50   c
+#' 151  M       B      50   c
+#' 150  M       B      50   b
+#' 150  M       B      50   b
+#' 150  M       B      50   c
+#' 150  M       B      50   c
+#' 150  M       B      50   c
+#' 150  M       B      50   b
+#' 120  A       B      50   b
+#' ")
+#' simdata$gender <- relevel(simdata$gender, 'M')
+#' tps(pch=16)
+#' xyplot(sal ~ age | area, simdata, groups = gender, auto.key = TRUE)
+#'
+#'
+#' contr.helmert(3)
+#' contr.rot <- function(n) {
+#'    ret <- contr.helmert(n)
+#'    disp(ret)
+#'    ret <- t( t(ret)/sqrt(apply(ret^2, 2, sum)))
+#'    ret
+#' }
+#' contr.rot(3)
+#' contr.rot(3) %>% crossprod
+#' contrasts(simdata$gender)
+#'
+#' (fit0 <- lm(sal ~ gender, simdata)) %>% summary
+#' (fit1 <- lm(sal ~ gender + age, simdata)) %>% summary
+#' (fit2 <- lm(sal ~ gender + age + area, simdata)) %>% summary
+#' (fit3 <- lm(sal ~ area/gender + age -1 , simdata)) %>% summary
+#' (fit4 <- lm(sal ~ area/gender + age + rank -1 , simdata)) %>% summary
+#'
+#' fitl <- list(gender = fit0, age = fit1, area = fit2, g_by_a = fit3, rank = fit4)
+#'
+#' pred <- with(simdata, spida2::pred.grid(gender,age,area))
+#' pred$fit3 <- predict(fit3, newdata = pred)
+#'
+#' xyplot(fit3 ~ age | area, pred, groups = gender, type = 'l',auto.key = TRUE) +
+#' xyplot(jitter(sal,10) ~ age | area, simdata, groups = gender, auto.key = TRUE)
+#'
+#' # Using fit1: no effect of area
+#' L1 <- rbind(Agap = c(0,1,0,0),
+#'             Fgap = c(0,0,1,0))
+#' waldf(fit1, L1)
+#'
+#' # Using fit2: additive area
+#' L2 <- rbind(Agap = c(0,1,0,0,0),
+#'             Fgap = c(0,0,1,0,0))
+#' waldf(fit2, L2)
+#'
+#' # Using fit3: no effect of area
+#' L3 <- rbind("Agap in A" = c(0,0,0,1,0,0,0),
+#'             "Fgap in A" = c(0,0,0,0,0,1,0),
+#'             "Agap in B" = c(0,0,0,0,1,0,0),
+#'             "Fgap in B" = c(0,0,0,0,0,0,1))
+#' waldf(fit3, L3)
+#'
+#' SEs <-   waldf(fit3, L3)$se
+#' wts <- 1/SEs^2   # precision weights
+#'
+#' # Type III average over Areas
+#'
+#' W3 <- rbind( A3 = std(c(1, 0 , 1, 0)),
+#'              F3 = std(c(0, 1 , 0, 1)))
+#' W3
+#'
+#' # Average by size of Areas  (dubious)
+#'
+#' nArea <- tab__(simdata, ~ area)
+#' nArea <- nArea[c(1,1,2,2)]
+#'
+#' Wsize <- rbind(
+#'     AnA = std(nArea * c(1,0,1,0)),
+#'     FnA = std(nArea * c(0,1,0,1))
+#' )
+#' Wsize
+#'
+#' # Average by size of equity group
+#'
+#' ## Compare relative weights of different methods
+#' ## Idea: Using additive model may give reasonable weights if no group is very small
+#' ## but bad idea for very small groups were the gap might not reflect the
+#' ## average **experience** of members of the small group.
+#' ## Weights will tend to look like (1/nF + 1/nM)^1 which will look like nF if small ..... so ....
+#' ## ... but maybe not so simple with other adjustment variables like age, etc....
+#'
+#' ns <- tab__(simdata, ~ gender + area)
+#' ns
+#' Weqn <- rbind(
+#'     AnA = std(c(ns['A','A'],0,ns['A','B'],0)),
+#'     FnA = std(c(0,ns['F','A'],0,ns['F','B']))
+#' )
+#' Weqn
+#'
+#' waldf(fit3, W3 %*% L3)
+#' waldf(fit3, Wsize %*% L3)
+#' waldf(fit3, Weqn %*% L3)
+#'
+#' decomp(fitl, 'gender', 'M') %>% gapplot
+#' decomp2(fitl, 'gender', 'M', cond = 'area') %>% gapplot
+#'
+#' decomp(fitl, 'gender', 'M') %>% decomp_table(log=FALSE) |> kb()
+#' decomp(fitl, 'gender', 'M') %>% decomp_table(log=TRUE)|> kb()
+#' decomp2(fitl, 'gender', 'M', cond = 'area') %>% gapplot
+#' decomp2(fitl, 'gender', 'M', cond = 'rank') %>% gapplot
+#'
+#' ## Using Gap ####
+#'
+#' library(spida2)
+#' library(peq)
+#' pred <- with(simdata, pred.grid(gender, area, age = seq(30,60,1) ))
+#'
+#' gap <- Gap(sal ~ gender + age + area, simdata, pred , 'gender')
+#' names(gap)
+#' gap$pred |> xyplot(Fit~ age | area, data = _, group=gender, auto.key = T)
+#' gap$pred %>% {
+#' xyplot(Gap~ age | area, data = ., group=gender, auto.key = T,
+#'    fit = .$Fit,
+#'    upper = .$upper,
+#'    lower = .$lower,
+#'    subscripts = TRUE) +
+#' glayer(panel.fit(...))
+#' }
+#' }
+#' @returns A list containing the following components
+#'   - fit: the fitted model
+#'   - data augmented with components
+#'     - Fit: Fitted (predicted) value for individual
+#'     - Line: Fitted value for individual if they belonged to comparator group
+#'     - Gap: Line - Fit
+#'     - Residual: Line - Salary
+#'     - residual: Fit - Salary
+#'   - pred augmented with components
+#'     - Fit: Fitted (predicted) value for individual
+#'     - Line: Fitted value for individual if they belonged to comparator group
+#'     - Gap: Line - Fit
+#'
+#' @export
+Gap <- function(formula, data, pred, groupvar = 'Gender', complevel = 'M',
+    ...){
+  #
+  # make sure groups var is first in formula (what if interacting?)
+  # -- maybe that matters only for pred
+  #
+  # Why do we need this?
+  # Need to use wald for standard error for gap
+  #   - currently used for pred data set but can also use
+  #     it for data itself
+  # Generate in pred:
+  #   - Fit: fitted value
+  #   - Line: comparator fitted value
+  #   - Gap: Line - Fit
+  #   - Gap_wald: generated with Wald test
+  # Generate in data:
+  #   - Fit, Line and Gap as above
+  #   - Residual: from Line
+  #   - residual: from Fit
+  #
+  # Test pred
+  #
+  if(names(pred)[1] != groupvar) message('check whether groupvar should be first in pred')
 
+  if(inherits(formula,'formula')) fit <- lm(formula, data, ...)
+  else fit <- formula   # fit must be a fitted model
+  depvar <- lhs(as.formula(fit))
+
+  ret <- within(
+    list(),
+    {
+
+      fit <- fit
+      data <- data
+      pred <- pred
+      groupvar <- groupvar
+      complevel <- complevel
+
+      pred$Fit <- predict(fit, newdata = pred)
+      data$Fit <- predict(fit, newdata = data)
+      #
+      # use wald and pred for standard errors
+      # for gap
+      #
+      ww <- waldf(fit, pred = pred)
+      Ldiff <- subrow(ww$L, which(ww[[groupvar]] == complevel))
+      ww <- waldf(fit, Ldiff)
+      pred$upper <- ww$coef + ww$se
+      pred$lower <- ww$coef - ww$se
+      pred$Gap_wald <- ww$coef
+
+      #
+      # Substitution estimates
+      #
+      predcomp <- pred
+      predcomp[[groupvar]][] <- complevel
+      predcomp$Line <- predict(fit, newdata = predcomp)
+
+      pred$Line <- predcomp$Line
+      pred$Gap <- with(pred, Fit - Line)
+      datacomp <- data
+
+      datacomp[[groupvar]][] <- complevel
+      datacomp$Line <- predict(fit, newdata = datacomp)
+      datacomp$Residual <- datacomp[[depvar]] - datacomp$Line
+
+      disp(dim(datacomp))
+
+
+      data$Fit <- predict(fit, newdata = data) # Fit for incumbent group
+      data$Line <- datacomp$Line            # Comparator line
+      data$Residual <- datacomp$Residual    # Line - individual
+      data$Gap <- with(data, Fit - Line)    # Line - Fit   (for group)
+      data$residual <- data[[depvar]] - data$Fit
+
+      rm(datacomp, predcomp)
+
+    }
+  )
+  class(ret) <- "Gap"
+  invisible(ret)
+}
+#' Plot method for Gap objects
+#'
+#' @param x Gap object
+#' @param fmla formula for plotting
+#' @param ylim limits for y axis. Default NULL to get calculation in code
+#' @param ylab label for vertical axis. Default NULL
+#' @param f factor to expand default 'ylim'. Default: .1
+#' @param ... additional parameters passed to \code{\link{xyplot}}
+#'
+#' @describeIn Gap plot method
+#' @export
+plot.Gap <- function(x, fmla, ylim =  NULL,
+                     ylab = NULL, f = 0.1, type = 1, ...){
+  pred <- x$pred
+  pred$Group_ <- pred[[x$groupvar]]
+  if(type ==1) {
+    fmla <- newlhs(fmla, 'Gap')
+  } else if(type == 2) {
+    fmla <- newlhs(fmla, 'Fit')
+  }
+  if(is.null(ylim)) {
+    ylim <- if(type == 1) {
+      c(matrix(c(1+f, -f, -f, 1+f), 2) %*%
+          range(c(pred$lower,pred$upper,0)))
+    } else if(type == 2) {
+      c(matrix(c(1+f, -f, -f, 1+f), 2) %*%
+          range(c(pred$Fit)))
+    } else ''
+  }
+  if(is.null(ylab)) {
+    ylab <- c('gender gap','predicted remuneration')[type]
+  }
+  if(type == 1) {  # gap
+    p <- xyplot(
+      fmla, data = pred, groups = Group_, auto.key = T,
+      ylim = ylim,
+      ylab = ylab,
+      type = 'l',
+      fit = pred$Gap,
+      upper = pred$upper,
+      lower = pred$lower,
+      subscripts = TRUE) +
+      glayer(panel.fit(...))
+    if(length(dim(p)) == 2) p <- useOuterStrips(p)
+  } else if(type == 2){   # salary levels
+    p <- xyplot(
+      fmla, data = pred, groups = Group_, auto.key = T,
+      ylim = ylim,
+      ylab = ylab,
+      type = 'l')
+    if(length(dim(p)) == 2) p <- useOuterStrips(p)
+
+  }
+  p
+}
+#' Printing generic function to produce kable output
+#'
+#' @param object object to be printed
+#' @param ... other parameters
+#'
+#' @export
+kprint <- function(object, ...) {
+  UseMethod("kprint")
+}
+#' Printing Gap object for kable output
+#'
+#' @param object a Gap object created by \code{\link{Gap}}
+#' @param ... other arguments
+#' @describeIn kprint method for Gap objects
+#' @export
+kprint.Gap <- function(object, formula, type = 1, ...){
+  totfmla <- newlhs(formula,'Gap')
+  total <- tab(totfmla, object$data)
+  Nfmla <- newlhs(formula, "")
+  Ns <- tab(Nfmla, object$data)
+  average <- total/Ns
+
+  # ret <- rbind(average, Ns, total)
+  message('kprint.Gap: incomple functions')
+  ret <- list("Average Gap" = average, N = Ns, Total = total)
+  ret
+}
+#' Printing lm object for kable output
+#'
+#' @param object a Gap object created by \code{\link{Gap}}
+#' @param ... other arguments
+#' @describeIn kprint method for printing lm output
+#' @export
+kprint.lm <- function(object,  ...){
+  library(modelsummary)
+  modelsummary(object,..., output = 'kableExtra')
+}
+#' Summary methods for Gap object
+#'
+#' @param object a Gap object created by \code{\link{Gap}}
+#' @param ... other arguments
+#' @describeIn Gap method for printing kable output
+#' @export
+summary.Gap <- function(object, formula, type = 1, ...){
+  totfmla <- newlhs(formula,'Gap')
+  total <- tab(totfmla, object$data)
+  Nfmla <- newlhs(formula, "")
+  Ns <- tab(Nfmla, object$data)
+  average <- total/Ns
+
+  # ret <- rbind(average, Ns, total)
+  message('summary.Gap: incomple functions')
+  ret <- list("Average Gap" = average, N = Ns, Total = total)
+  ret
+}
+#'
+#' Change the dependent variable of a formula
+#'
+#' @param fmla a formula
+#' @param depvar a character string with the intended name of the LHS of the
+#'        formula, default: ''
+#' @returns a formula with the same RHS as 'fmla' and the value of depvar
+#'          for its LHS
+#' @export
+newlhs <- function(fmla, depvar = ''){
+  # replaces dependent variable in a formula
+  #
+  RHS <- fmla[length(fmla)]
+  ret <- formula(paste(depvar, "~", as.character(RHS)))
+  environment(ret) <- environment(fmla)
+  ret
+}
+#' @describeIn newlhs deprecated name
+#' @export
+newdep <- newlhs
+#' Extract the LHS of a formula as a character
+#'
+#' @param fmla a formula
+#'
+#' @returns the LHS as a character
+#' @export
+lhs <- function(fmla) {
+  if(length(fmla) == 2) "" else as.character(fmla[2])
+}
+
+#' Subtract selected row(s) of a matrix from all rows
+#'
+#' @param L a matrix, typically a hypothesis matrix
+#' @param i a vector used as row indices for L
+#'
+#' @returns L minus the rows of L with index i, where the selected rows
+#'          are repeated nrow(L)/length(i) times. For example, if
+#'          L has 4 rows and i= 1, then the first row of L is subtracted from
+#'          all rows. If i=c(1,3), then the first row is subtracted from
+#'          rows 1 and 2, and the third row is subtracted from rows 3 and 4.
+#'
+#' @examples
+#' L <- cbind(1, 1:4, c(-1,1,1,-1))
+#' subrow(L, c(1,3))
+#' @export
+subrow <- function(L, i) {
+  ret <- L - L[rep(i,each = nrow(L)/length(i)),,drop=FALSE]
+  attr(ret, 'data') <- attr(L, 'data')
+  ret
+}

@@ -41,7 +41,7 @@ kb <- function(
 #' Turn rownames into labelled column for kable
 #'
 #' @param x object
-#' @param label
+#' @param label to add for column of rownames
 #' @param ... ignored
 #' @export
 add_rownames <- function(x, label = names(dimnames(x))[1], ...) {

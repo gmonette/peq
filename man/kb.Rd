@@ -6,6 +6,15 @@
 \usage{
 kb(x, caption = NULL, format.args = list(big.mark = ","), ...)
 }
+\arguments{
+\item{x}{object to print}
+
+\item{caption}{default: NULL}
+
+\item{format.args}{default: list(big.mark = ',')}
+
+\item{...}{other arguments}
+}
 \description{
 Collect options for kbl
 }
