@@ -9,7 +9,7 @@
 #'
 #' @param ... parameters for getAnywhere
 #'
-#' @import utils
+#' @importFrom utils getAnywhere
 #' @export
 ga <- function(...) {
   getAnywhere(...)
@@ -135,7 +135,7 @@ relevel_first <- function(x, ref, ...) {
 relevel_size <- function(x, ord = -capply(x, x, length), ...) {
   reorder(as.factor(x), ord)
 }
-#' @import spida2
+#' @importFrom spida2 capply
 #' @export
 combine_small_levels <- function(x, size = 6, name = 'Smaller groups') {
   tofac <- is.factor(x)
