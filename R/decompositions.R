@@ -735,7 +735,8 @@ decomp2 <- function(fitl, g, comp, data = na.omit(getD(full)), cond = NULL, refi
   ret[['resids2']] <- resids2
   # disp(resids2)
   # disp(unlist(resids2) > 10^(-11))
-  if(any(unlist(resids2) > 10^(-11))) warning('Some models may not be nested in last model. See resids2')
+  if(any(unlist(resids2) > 10^(-11))) warning(
+    'Some models may not be nested in last model. See resids2')
 
   ret[['pred']] <- pred %>% addrownames
 
@@ -746,7 +747,8 @@ decomp2 <- function(fitl, g, comp, data = na.omit(getD(full)), cond = NULL, refi
   # from above: mfs <- lapply(fitl, model.matrix, data = d)
   # from above: mgs <- lapply(fitl, model.matrix, data = dg)
   # not needed: mffull <- mfs[[length(mfs)]]
-  # not needed: Bs <- lapply(seq_along(mfs), function(ii) lsfit(mfs[[ii]], mffull, intercept =FALSE )$coef)
+  # not needed: Bs <- lapply(seq_along(mfs), function(ii) lsfit(mfs[[ii]], mffull,
+  #        intercept =FALSE )$coef)
   Ls_each <- lapply(
     along(mfs),
     function(ii) {
@@ -754,7 +756,8 @@ decomp2 <- function(fitl, g, comp, data = na.omit(getD(full)), cond = NULL, refi
       attr(Lmat, 'data') <- subset(data, model == names(fitl)[ii])
       waldf(fitl[[ii]], Lmat)
     })
-  ret[['gaps_each']] <-Ls_each %>% lapply(subset, select = -L) %>% do.call(rbind,.) %>% addrownames
+  ret[['gaps_each']] <-Ls_each %>% lapply(subset, select = -L) %>% do.call(rbind,.) %>%
+    addrownames
 
   ## Comparing fitted values from 'predict' and from X %*% beta ------ is okay
 
@@ -821,7 +824,8 @@ decomp2 <- function(fitl, g, comp, data = na.omit(getD(full)), cond = NULL, refi
 #'
 #' @param x predictor matrix, should include intercept term if needed
 #' @param y response vector or matrix
-#' @param zero value below which a latent value of the data matrix is considered to be 0, default 10^(-7) in parallel with \code{\link{lsfit}}.
+#' @param zero value below which a latent value of the data matrix is considered to be 0,
+#'        default 10^(-7) in parallel with \code{\link{lsfit}}.
 #'
 #' @export
 lssvd <- function(x, y, zero = 1e-07,...) {
@@ -897,12 +901,47 @@ if(FALSE) {
 #' @import lattice
 #' @import latticeExtra
 #' @export
-gapplot <- function(obj, data = obj$gaps_each, log = FALSE, rot = 45,
+gapplot <- function(obj, ...) {
+  UseMethod('gapplot')
+}
+#' @param fmla character string
+#' @describeIn gapplot method for 'decomps' objects
+#' @export
+gapplot.decomps <-
+  function(
+    obj, data = obj$summ, depvar = "diffg_",
+    fmla = NULL,
+    cond = obj$names$cond,
+    log = FALSE, rot = 45,
+    ylab = 'Group-weighted adjusted salary gaps',
+    # ylab = 'Group-weighted adjusted salary gaps\nfrom comparator group',
+    xlab = 'Cumulatively adjusted factors',
+    at = seq(-200000,100000,10000)
+  ){
+    obj$summ$coef <- obj$summ[[depvar]]
+    obj$summ <- sortdf(obj$summ, ~ model)
+
+#
+#     if(is.null(fmla)) {
+#       fmla <- "coef ~ model"
+#       if(!is.null(cond)) fmla <- paste(c(fmla, cond), collapse = "+")
+#     }
+
+    gapplot.default(obj, data = obj$summ, log = log, rot = rot,
+                    ylab = ylab,
+                    xlab = xlab,
+                    at = at)
+  }
+#' @describeIn gapplot default method
+#' @export
+gapplot.default <- function(obj, data = obj$gaps_each, log = FALSE, rot = 45,
                     ylab = 'Group-weighted adjusted salary gaps',
                     # ylab = 'Group-weighted adjusted salary gaps\nfrom comparator group',
                     xlab = 'Cumulatively adjusted factors',
                     at = seq(-200000,100000,10000),
-                    auto.key = list(space = 'right'), ...) {
+                    auto.key = list(space = 'right'),
+                    fmla = "coef ~ model",
+                    ...) {
 # gapplot <- function(obj, data = obj$dout, log = FALSE, rot = 45,
 #                     at = seq(-200000,100000,10000),...) {
   library(latticeExtra)
@@ -955,7 +994,7 @@ gapplot <- function(obj, data = obj$gaps_each, log = FALSE, rot = 45,
   }
   disp(data$coef)
   data$gr_ <- with(data, reorder(factor(data[[obj$names$gname]]), - coef))
-  fmla <- "coef ~ model"
+  # fmla <- "coef ~ model"
   if(!is.null(obj$names$cond)) {
     fmla <- paste(fmla, "|" , paste(obj$names$cond, collapse = '*'))
   }
@@ -1068,7 +1107,8 @@ else  xyplot(gresids ~ data[[obj$names$gname]] | model,
                        stats = qstats.resplot)) +
     layer_(panel.grid(v=-1,h=-1))+
     layer(panel.abline(h=0))
-} #  resplot(z, at = seq(-100,110,10),log = T,which = 2, data = subset(z$dout, !model %in%c('full','fit1'))) # end of resplot                                        ## RUN --------------
+} #  resplot(z, at = seq(-100,110,10),log = T,which = 2,
+  #       data = subset(z$dout, !model %in%c('full','fit1'))) # end of resplot                                        ## RUN --------------
 
 ## testing ####
 
@@ -1128,9 +1168,11 @@ decomp_table_log <- function(z, p = TRUE, n_min = 1, reduction = "Change"){
   #
   gaps <- z$gaps_each
   pred <- z$pred
-  fmla <- as.formula(paste('coef ~ ', paste(c(z$names$gname,"model", z$names$cond), collapse = '+')))
+  fmla <- as.formula(paste('coef ~ ', paste(c(z$names$gname,"model",
+                                              z$names$cond), collapse = '+')))
   fmla_n <-  as.formula(paste(' ~ ', paste(c(z$names$gname, z$names$cond), collapse = '+')))
-  fmla_p <- as.formula(paste('`p-value` ~ ', paste(c(z$names$gname,"model", z$names$cond), collapse = '+')))  #new
+  fmla_p <- as.formula(paste('`p-value` ~ ', paste(c(z$names$gname,"model",
+                                                     z$names$cond), collapse = '+')))  #new
 
   gap_tab <- tab__(fmla, gaps)
   pred_tab <- tab__(fmla, pred)
@@ -1200,7 +1242,7 @@ decomp_table_log <- function(z, p = TRUE, n_min = 1, reduction = "Change"){
 
     # make row 3 with p-values
 
-    ret3 <- array(' ', dims_ret)     # row 3 of each cell (no-empty for prevent vertical centering)
+    ret3 <- array(' ', dims_ret) # row 3 of each cell (no-empty for prevent vertical centering)
     ii[[2]] <- seq(2,dim(ret3)[2],2)
     ret3 <- do.call("[<-", c(list(ret3),ii, list(p_tab)))
 
@@ -1296,9 +1338,11 @@ decomp_table_raw <- function(z, p = TRUE, n_min = 1, reduction = 'Change'){
   #
   gaps <- z$gaps_each
   pred <- z$pred
-  fmla <- as.formula(paste('coef ~ ', paste(c(z$names$gname,"model", z$names$cond), collapse = '+')))
+  fmla <- as.formula(paste('coef ~ ',
+                           paste(c(z$names$gname,"model", z$names$cond), collapse = '+')))
   fmla_n <-  as.formula(paste(' ~ ', paste(c(z$names$gname, z$names$cond), collapse = '+')))
-  fmla_p <- as.formula(paste('`p-value` ~ ', paste(c(z$names$gname,"model", z$names$cond), collapse = '+')))  #new
+  fmla_p <- as.formula(paste('`p-value` ~ ',
+                             paste(c(z$names$gname,"model", z$names$cond), collapse = '+')))  #new
 
   gap_tab <- tab__(fmla, gaps)
   pred_tab <- tab__(fmla, pred)
@@ -1437,9 +1481,12 @@ decomp_table_log_original <- function(z){
   #
   gaps <- z$gaps_each
   pred <- z$pred
-  fmla <- as.formula(paste('coef ~ ', paste(c(z$names$gname,"model", z$names$cond), collapse = '+')))
-  fmla_n <-  as.formula(paste(' ~ ', paste(c(z$names$gname, z$names$cond), collapse = '+')))
-  fmla_p <- as.formula(paste('`p-value` ~ ', paste(c(z$names$gname,"model", z$names$cond), collapse = '+')))
+  fmla <- as.formula(paste('coef ~ ',
+                           paste(c(z$names$gname,"model", z$names$cond), collapse = '+')))
+  fmla_n <-  as.formula(paste(' ~ ',
+                              paste(c(z$names$gname, z$names$cond), collapse = '+')))
+  fmla_p <- as.formula(paste('`p-value` ~ ',
+                             paste(c(z$names$gname,"model", z$names$cond), collapse = '+')))
 
   gap_tab <- tab__(fmla, gaps)
   pred_tab <- tab__(fmla, pred)
@@ -1535,9 +1582,12 @@ decomp_table_log_original2 <- function(z, p = TRUE){
   #
   gaps <- z$gaps_each
   pred <- z$pred
-  fmla <- as.formula(paste('coef ~ ', paste(c(z$names$gname,"model", z$names$cond), collapse = '+')))
-  fmla_n <-  as.formula(paste(' ~ ', paste(c(z$names$gname, z$names$cond), collapse = '+')))
-  fmla_p <- as.formula(paste('`p-value` ~ ', paste(c(z$names$gname,"model", z$names$cond), collapse = '+')))  #new
+  fmla <- as.formula(paste('coef ~ ',
+                           paste(c(z$names$gname,"model", z$names$cond), collapse = '+')))
+  fmla_n <-  as.formula(paste(' ~ ',
+                              paste(c(z$names$gname, z$names$cond), collapse = '+')))
+  fmla_p <- as.formula(paste('`p-value` ~ ',
+                             paste(c(z$names$gname,"model", z$names$cond), collapse = '+')))  #new
 
   gap_tab <- tab__(fmla, gaps)
   pred_tab <- tab__(fmla, pred)

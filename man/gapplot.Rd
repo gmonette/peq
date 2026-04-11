@@ -2,9 +2,26 @@
 % Please edit documentation in R/decompositions.R
 \name{gapplot}
 \alias{gapplot}
+\alias{gapplot.decomps}
+\alias{gapplot.default}
 \title{Plotting a decomp object}
 \usage{
-gapplot(
+gapplot(obj, ...)
+
+\method{gapplot}{decomps}(
+  obj,
+  data = obj$summ,
+  depvar = "diffg_",
+  fmla = NULL,
+  cond = obj$names$cond,
+  log = FALSE,
+  rot = 45,
+  ylab = "Group-weighted adjusted salary gaps",
+  xlab = "Cumulatively adjusted factors",
+  at = seq(-2e+05, 1e+05, 10000)
+)
+
+\method{gapplot}{default}(
   obj,
   data = obj$gaps_each,
   log = FALSE,
@@ -13,12 +30,22 @@ gapplot(
   xlab = "Cumulatively adjusted factors",
   at = seq(-2e+05, 1e+05, 10000),
   auto.key = list(space = "right"),
+  fmla = "coef ~ model",
   ...
 )
 }
 \arguments{
+\item{fmla}{character string}
+
 \item{decomp}{a decomp object creaate by \code{\link{decomp}}.}
 }
 \description{
 Plotting a decomp object
 }
+\section{Methods (by class)}{
+\itemize{
+\item \code{gapplot(decomps)}: method for 'decomps' objects
+
+\item \code{gapplot(default)}: default method
+
+}}
